@@ -1,0 +1,471 @@
+/* Floating Circles Layout Styles */
+.floating-circles-container {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  margin: 2rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Central "View All Tasks" Circle */
+.central-circle {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  z-index: 10;
+}
+
+.central-circle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.central-circle.active {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.5);
+}
+
+.central-icon {
+  font-size: 24px;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.central-text {
+  text-align: center;
+  color: white;
+}
+
+.central-text .main-text {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.central-text .sub-text {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.central-text .count-text {
+  display: block;
+  font-size: 10px;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+/* Member Circles */
+.member-circle {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: white;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 5;
+}
+
+.member-circle:hover {
+  transform: scale(1.05);
+  border-color: #4299e1;
+  box-shadow: 0 4px 15px rgba(66, 153, 225, 0.3);
+}
+
+.member-circle.active {
+  border-color: #3182ce;
+  background: #ebf8ff;
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(49, 130, 206, 0.4);
+}
+
+.member-circle .member-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 4px;
+  border: 2px solid #e2e8f0;
+}
+
+.member-circle .member-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.member-circle .member-avatar svg {
+  width: 100%;
+  height: 100%;
+  color: #a0aec0;
+  background: #f7fafc;
+  padding: 8px;
+}
+
+.member-circle .member-info {
+  text-align: center;
+  font-size: 10px;
+}
+
+.member-circle .member-name {
+  display: block;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1;
+  margin-bottom: 1px;
+}
+
+.member-circle .member-role {
+  display: block;
+  font-size: 8px;
+  color: #718096;
+  line-height: 1;
+  margin-bottom: 1px;
+}
+
+.member-circle .member-role.leader {
+  color: #d69e2e;
+  font-weight: 600;
+}
+
+.member-circle .task-count {
+  display: block;
+  font-size: 8px;
+  color: #4299e1;
+  font-weight: 500;
+}
+
+/* Task Indicator Badge */
+.task-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 24px;
+  height: 24px;
+  background: #e53e3e;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  border: 2px solid white;
+}
+
+/* Connection Lines */
+.connection-lines {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Selected Member Tasks Panel */
+.selected-member-tasks {
+  margin-top: 2rem;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.selected-member-tasks .tasks-header {
+  background: #f7fafc;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selected-member-tasks .tasks-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.close-tasks-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #718096;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-tasks-btn:hover {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+/* Tasks List Styles */
+.selected-member-tasks .tasks-list {
+  padding: 1rem 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.selected-member-tasks .task-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.selected-member-tasks .task-item:hover {
+  background: #ffffff;
+  border-color: #4299e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(66, 153, 225, 0.15);
+}
+
+.selected-member-tasks .task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.selected-member-tasks .task-header h6 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.3;
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-task-btn, .delete-task-btn {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.edit-task-btn {
+  color: #4299e1;
+}
+
+.edit-task-btn:hover {
+  background: #ebf8ff;
+  color: #3182ce;
+}
+
+.delete-task-btn {
+  color: #e53e3e;
+}
+
+.delete-task-btn:hover {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.selected-member-tasks .task-description {
+  font-size: 0.85rem;
+  color: #4a5568;
+  line-height: 1.4;
+  margin-bottom: 0.75rem;
+}
+
+.selected-member-tasks .task-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.selected-member-tasks .task-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #718096;
+}
+
+.task-status {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.75rem !important;
+}
+
+.task-status.pending {
+  background: #fef5e7;
+  color: #d69e2e;
+}
+
+.task-status.submitted {
+  background: #f0fff4;
+  color: #38a169;
+}
+
+.task-phase {
+  background: #e6fffa;
+  color: #319795;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.assigned-to, .submissions-info {
+  font-size: 0.8rem;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.no-tasks {
+  text-align: center;
+  padding: 2rem;
+  color: #718096;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .floating-circles-container {
+    width: 300px;
+    height: 300px;
+    margin: 1rem auto;
+  }
+
+  .central-circle {
+    width: 90px;
+    height: 90px;
+  }
+
+  .central-icon {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .central-text .main-text,
+  .central-text .sub-text {
+    font-size: 11px;
+  }
+
+  .central-text .count-text {
+    font-size: 8px;
+  }
+
+  .member-circle {
+    width: 75px;
+    height: 75px;
+  }
+
+  .member-circle .member-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .member-circle .member-info {
+    font-size: 8px;
+  }
+
+  .member-circle .member-name {
+    font-size: 8px;
+  }
+
+  .member-circle .member-role {
+    font-size: 7px;
+  }
+
+  .member-circle .task-count {
+    font-size: 7px;
+  }
+
+  .task-indicator {
+    width: 18px;
+    height: 18px;
+    font-size: 8px;
+  }
+
+  /* Adjust member positions for smaller screen */
+  .member-circle {
+    transform: scale(0.9);
+  }
+}
+
+@media (max-width: 480px) {
+  .floating-circles-container {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .selected-member-tasks .tasks-header,
+  .selected-member-tasks .tasks-list {
+    padding: 0.75rem 1rem;
+  }
+  
+  .selected-member-tasks .task-item {
+    padding: 0.75rem;
+  }
+}
+
+/* Animation for smooth transitions */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.floating-circles-container {
+  animation: fadeInScale 0.5s ease-out;
+}
+
+.member-circle,
+.central-circle {
+  animation: fadeInScale 0.3s ease-out forwards;
+}
+
+.member-circle:nth-child(2) { animation-delay: 0.1s; }
+.member-circle:nth-child(3) { animation-delay: 0.2s; }
+.member-circle:nth-child(4) { animation-delay: 0.3s; }
+.member-circle:nth-child(5) { animation-delay: 0.4s; }
+.member-circle:nth-child(6) { animation-delay: 0.5s; }

@@ -1,0 +1,621 @@
+/* New Project Grading Dashboard Styles */
+.grading-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.close-btn, .back-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.close-btn:hover, .back-btn:hover {
+  background: #5a6268;
+}
+
+.back-btn {
+  margin-top: 10px;
+  background: #007bff;
+}
+
+.back-btn:hover {
+  background: #0056b3;
+}
+
+/* Loading and Error States */
+.loading-container, .error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-container {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 5px;
+  padding: 20px;
+  color: #721c24;
+}
+
+/* Groups List View */
+.groups-list h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.group-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  border-color: #007bff;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.group-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.submitted {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.graded {
+  background: #cce7ff;
+  color: #004085;
+}
+
+.group-info {
+  margin-bottom: 15px;
+}
+
+.members-count {
+  margin-bottom: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.submission-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.group-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 15px;
+}
+
+.member-pill {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #495057;
+}
+
+.member-pill.more {
+  background: #e9ecef;
+  color: #6c757d;
+}
+
+.card-footer {
+  text-align: right;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.click-hint {
+  color: #007bff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.no-submissions {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+/* Group Details View */
+.group-info-header {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.group-info-header h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.group-members-detailed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.member-badge {
+  background: #007bff;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.member-badge.leader {
+  background: #ffc107;
+  color: #212529;
+}
+
+/* Submission Sections */
+.submission-section {
+  margin-bottom: 30px;
+}
+
+.submission-section h4 {
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e9ecef;
+  color: #495057;
+}
+
+/* Submission Cards */
+.submission-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.project-submission {
+  border-left: 4px solid #28a745;
+}
+
+.phase-submission {
+  border-left: 4px solid #17a2b8;
+}
+
+.task-submission {
+  border-left: 4px solid #ffc107;
+  margin-left: 20px;
+  margin-top: 10px;
+}
+
+.submission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-tasks-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.toggle-tasks-btn:hover {
+  background: #5a6268;
+}
+
+.task-submissions-section {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.task-submissions-section h6 {
+  margin-bottom: 15px;
+  color: #495057;
+}
+
+.task-submissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.grade-form.compact {
+  padding: 15px;
+}
+
+.grade-form.compact .form-group {
+  margin-bottom: 10px;
+}
+
+.grade-form.compact textarea {
+  min-height: 60px;
+}
+
+.submission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.submission-header h5, .submission-header h6 {
+  margin: 0;
+  color: #333;
+}
+
+.submission-details {
+  margin-bottom: 15px;
+}
+
+.submission-details p {
+  margin: 5px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.current-grade {
+  background: #e8f5e8;
+  padding: 8px 12px;
+  border-radius: 5px;
+  color: #2d5a2d;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+/* File and Grade Sections */
+.file-section, .grade-section {
+  margin-top: 15px;
+}
+
+.download-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.download-btn:hover {
+  background: #5a6268;
+}
+
+.grade-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.grade-btn.primary {
+  background: #007bff;
+  color: white;
+}
+
+.grade-btn.primary:hover {
+  background: #0056b3;
+}
+
+/* Grade Form */
+.grade-form {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-group input, .form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.individual-grades h6 {
+  margin-bottom: 10px;
+  color: #495057;
+}
+
+.individual-grade-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.individual-grade-row:last-child {
+  border-bottom: none;
+}
+
+.individual-grade-row span {
+  font-size: 14px;
+  color: #495057;
+}
+
+.individual-grade-row input {
+  width: 80px;
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn.primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #0056b3;
+}
+
+.btn.secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn.secondary:hover {
+  background: #5a6268;
+}
+
+.phases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Frozen Submission Styles */
+.frozen-indicator {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.frozen-badge {
+  background: #1976d2;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+/* Submission Content Display */
+.submission-content {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.text-content {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #495057;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  padding: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 3px;
+}
+
+/* Enhanced File Section */
+.file-section h6 {
+  margin-bottom: 10px;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.file-section .download-btn {
+  display: block;
+  margin: 5px 0;
+  background: #28a745;
+  text-decoration: none;
+  text-align: center;
+  width: fit-content;
+}
+
+.file-section .download-btn:hover {
+  background: #218838;
+}
+
+/* Status badges enhancements */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.approved {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-badge.revision_requested {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-badge.rejected {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-badge.no_submission {
+  background: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
+}
+
+/* No Phase Submissions Section */
+.no-phase-submissions {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.frozen-tasks-overview {
+  margin-top: 20px;
+}
+
+.frozen-tasks-overview h5 {
+  color: #495057;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.phase-task-group {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.phase-task-group h6 {
+  color: #007bff;
+  margin-bottom: 15px;
+  font-size: 16px;
+  font-weight: 600;
+}
