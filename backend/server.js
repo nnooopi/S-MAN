@@ -13,6 +13,13 @@ const fs = require('fs');
 
 require('dotenv').config();
 
+// Determine the correct path to frontend build folder
+const frontendBuildPath = path.join(__dirname, '../frontend/build');
+const buildPathExists = fs.existsSync(frontendBuildPath);
+console.log('🔍 [PATH] __dirname:', __dirname);
+console.log('🔍 [PATH] frontendBuildPath:', frontendBuildPath);
+console.log('🔍 [PATH] Build folder exists:', buildPathExists);
+
 const app = express();
 
 // Request timeout to prevent hanging requests
@@ -40,7 +47,15 @@ app.use(express.json({
     return contentType.includes('application/json');
   }
 }));
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+// Serve frontend build files if they exist
+if (buildPathExists) {
+  console.log('📁 [INIT] Serving frontend from:', frontendBuildPath);
+  app.use(express.static(frontendBuildPath));
+} else {
+  console.log('⚠️  [WARNING] Frontend build folder not found at:', frontendBuildPath);
+}
+
 
 
 // Supabase client with service role for admin operations
