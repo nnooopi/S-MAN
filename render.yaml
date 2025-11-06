@@ -4,8 +4,8 @@ services:
     env: node
     region: oregon
     plan: free
-    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
-    startCommand: cd backend && npm start
+    buildCommand: sh -c "cd frontend && npm install && npm run build && cd ../backend && npm install"
+    startCommand: sh -c "cd backend && npm start"
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
