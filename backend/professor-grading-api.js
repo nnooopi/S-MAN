@@ -6,9 +6,9 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const router = express.Router();
 
-// Initialize Supabase client (using environment variables)
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Initialize Supabase client (using environment variables with fallback)
+const supabaseUrl = process.env.SUPABASE_URL || 'https://qorkowgfjjuwxelumuut.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvcmtvd2dmamp1d3hlbHVtdXV0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODAyMDYwMywiZXhwIjoyMDczNTk2NjAzfQ.60CRB4D4LX9MnFzckDrA3iHpKIPqJBnBt94eAGBkHzs';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // ============================================
