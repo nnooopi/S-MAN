@@ -7502,7 +7502,7 @@ const handleRejectExtension = async () => {
   // Call debug endpoint to understand user memberships
   const debugUserGroups = async () => {
     try {
-      const response = await fetch('${API_BASE_URL}/api/student/debug/groups', {
+      const response = await fetch(`${API_BASE_URL}/api/student/debug/groups`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

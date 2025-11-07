@@ -1440,7 +1440,7 @@ const CourseProfessorDashboard = () => {
     const fetchProfessorProfile = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('${API_BASE_URL}/api/professor/profile', {
+        const response = await fetch(`${API_BASE_URL}/api/professor/profile`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1634,7 +1634,7 @@ const CourseProfessorDashboard = () => {
       
       const token = localStorage.getItem('token');
       
-      const coursesResponse = await fetch('${API_BASE_URL}/api/professor/courses', {
+      const coursesResponse = await fetch(`${API_BASE_URL}/api/professor/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
