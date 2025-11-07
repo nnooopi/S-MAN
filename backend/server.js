@@ -19500,7 +19500,7 @@ if (buildPathExists) {
   
   // Catch-all handler: send back React's index.html for any non-API routes
   // This MUST be defined AFTER all API routes
-  app.get('*', (req, res) => {
+  app.use((req, res, next) => {
     // Only serve index.html for non-API routes
     if (!req.path.startsWith('/api/')) {
       res.sendFile(path.join(frontendBuildPath, 'index.html'));
