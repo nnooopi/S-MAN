@@ -33595,7 +33595,7 @@ const TaskGroupCard = ({ taskGroup, onApprove, onRequestRevision }) => {
                                 width: `${progressPercentage}%`,
                                 height: '100%',
                                 background: (() => {
-                                                                                                                                                                            // Dynamic gradient based on progress
+                                  // Dynamic gradient based on progress
                                   if (progressPercentage >= 80) {
                                     // Green gradient (80-100%)
                                     return 'linear-gradient(90deg, #10B981 0%, #059669 100%)';
@@ -33938,7 +33938,7 @@ const TaskGroupCard = ({ taskGroup, onApprove, onRequestRevision }) => {
                                       <img
                                         src={taskGroup.profile_image_url.startsWith('http')
                                           ? taskGroup.profile_image_url
-                                          : `http://localhost:5000${taskGroup.profile_image_url}`}
+                                          : `${API_BASE_URL}${taskGroup.profile_image_url}`}
                                         alt={taskGroup.student_name}
                                         onError={(e) => {
                                           e.target.style.display = 'none';
@@ -34441,7 +34441,7 @@ const TaskGroupCard = ({ taskGroup, onApprove, onRequestRevision }) => {
                                     <img
                                       src={feedback.profile_image_url.startsWith('http')
                                         ? feedback.profile_image_url
-                                        : `http://localhost:5000${feedback.profile_image_url}`}
+                                        : `${API_BASE_URL}${feedback.profile_image_url}`}
                                       alt={feedback.reviewer_name}
                                       onError={(e) => {
                                         e.target.style.display = 'none';
