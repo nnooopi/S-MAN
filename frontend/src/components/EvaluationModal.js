@@ -59,7 +59,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `${API_BASE_URL}/api/student/groups/${evaluation.group_id}/evaluations/my-submissions?phaseId=${evaluation.phase_id}`,
+        `http://localhost:5000/api/student/groups/${evaluation.group_id}/evaluations/my-submissions?phaseId=${evaluation.phase_id}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -281,7 +281,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       const token = localStorage.getItem('token');
       
       // Fetch the project evaluation form
-      const response = await fetch(`${API_BASE_URL}/api/student/projects/${evaluation.project_id}/evaluation-form`, {
+      const response = await fetch(`http://localhost:5000/api/student/projects/${evaluation.project_id}/evaluation-form`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -325,7 +325,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       const groupId = project?.group_id || evaluation?.group_id;
       if (!token || !groupId) return;
 
-      const response = await fetch(`${API_BASE_URL}/api/student/groups/${groupId}`, {
+      const response = await fetch(`http://localhost:5000/api/student/groups/${groupId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -380,7 +380,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       if (!evaluation.id) return;
       
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/evaluations/submission/${evaluation.id}`, {
+      const response = await fetch(`http://localhost:5000/api/evaluations/submission/${evaluation.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -409,7 +409,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       setSaveError(null);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/evaluations/submission/${evaluation.id}/save`, {
+      const response = await fetch(`http://localhost:5000/api/evaluations/submission/${evaluation.id}/save`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -724,7 +724,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
         
         // Submit to backend - for custom evaluations with file
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/api/evaluations/phase-custom/submit`, {
+        const response = await fetch(`http://localhost:5000/api/evaluations/phase-custom/submit`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -809,11 +809,11 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
 
       // Import apiConfig at the top if not already imported
       // Determine the correct endpoint based on evaluation type
-      let endpoint = `${process.env.REACT_APP_API_URL || '${API_BASE_URL}'}/api/evaluations/submission/${evaluation.id}/submit`;
+      let endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/evaluations/submission/${evaluation.id}/submit`;
       if (evaluation.type === 'phase_evaluation') {
-        endpoint = `${process.env.REACT_APP_API_URL || '${API_BASE_URL}'}/api/evaluations/submission/${evaluation.id}/submit`;
+        endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/evaluations/submission/${evaluation.id}/submit`;
       } else if (evaluation.type === 'project_evaluation') {
-        endpoint = `${process.env.REACT_APP_API_URL || '${API_BASE_URL}'}/api/project-evaluations/${evaluation.id}/submit`;
+        endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/project-evaluations/${evaluation.id}/submit`;
       }
 
       const response = await fetch(endpoint, {
@@ -2715,4 +2715,3 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
 };
 
 export default EvaluationModal;
-
