@@ -13,15 +13,12 @@ const timestamp = new Date().toISOString();
 console.log(`\n[${timestamp}] 🚀 RENDER BUILD SCRIPT STARTING\n`);
 
 try {
-  console.log('📦 Phase 1: npm install (root dependencies)');
-  execSync('npm install', { stdio: 'inherit' });
-  
-  console.log('\n🏗️  Phase 2: Building frontend');
   const rootDir = __dirname;
   const frontendDir = path.join(rootDir, 'frontend');
   const backendDir = path.join(rootDir, 'backend');
   
   // Build frontend
+  console.log('🏗️  Phase 1: Building frontend');
   process.chdir(frontendDir);
   console.log('📂 In:', process.cwd());
   execSync('npm install', { stdio: 'inherit' });
@@ -35,7 +32,7 @@ try {
   console.log('✅ Frontend build created');
   
   // Install backend deps
-  console.log('\n📦 Phase 3: Installing backend dependencies');
+  console.log('\n📦 Phase 2: Installing backend dependencies');
   process.chdir(backendDir);
   console.log('📂 In:', process.cwd());
   execSync('npm install', { stdio: 'inherit' });

@@ -1,14 +1,12 @@
 {
   "name": "s-man-system",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "engines": {
     "node": "22.16.0"
   },
   "scripts": {
     "build": "node render-build.js",
-    "start": "node start.js",
-    "heroku-postbuild": "node render-build.js",
-    "postinstall": "npm run build || true"
+    "start": "node start.js"
   },
   "description": "S-MAN Course Management System",
   "devDependencies": {
