@@ -1,9 +1,13 @@
 {
   "name": "s-man-system",
-  "version": "1.0.3",
+  "version": "1.0.4",
+  "engines": {
+    "node": "22.16.0"
+  },
   "scripts": {
     "build": "node build.js",
     "start": "node start.js",
+    "heroku-postbuild": "node build.js",
     "postinstall": "node build.js || true"
   },
   "devDependencies": {
