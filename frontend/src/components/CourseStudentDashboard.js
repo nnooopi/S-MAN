@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { API_BASE_URL } from '../config/api';
 import TaskDetailModal from './TaskDetailModal';
 import RevisionModal from './RevisionModal';
 import CompletedTaskModal from './CompletedTaskModal';
@@ -2034,7 +2035,7 @@ const loadEvaluationsData = async () => {
     
     // Fetch evaluations based on current toggle state
     const response = await fetch(
-      `http://localhost:5000/api/evaluations/student/${user.id}?type=${evaluationTypeToggle}&view=${evaluationViewFilter}`,
+      `${API_BASE_URL}/api/evaluations/student/${user.id}?type=${evaluationTypeToggle}&view=${evaluationViewFilter}`,
       {
         method: 'GET',
         headers: {
@@ -3000,7 +3001,7 @@ const fetchGroupMembers = async (projectId) => {
 const fetchProjectRubric = async (projectId) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/student/projects/${projectId}/rubric`, {
+    const response = await fetch(`${API_BASE_URL}/api/student/projects/${projectId}/rubric`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -3028,7 +3029,7 @@ const fetchProjectRubric = async (projectId) => {
 const fetchProjectEvaluation = async (projectId) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/student/projects/${projectId}/evaluation-form`, {
+    const response = await fetch(`${API_BASE_URL}/api/student/projects/${projectId}/evaluation-form`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -3206,7 +3207,7 @@ const fetchReceivedEvaluations = async (groupId, phaseId = null, projectId = nul
     setEvaluationScoresLoading(true);
     const token = localStorage.getItem('token');
     
-    let url = `http://localhost:5000/api/student/groups/${groupId}/evaluations/received?`;
+    let url = `${API_BASE_URL}/api/student/groups/${groupId}/evaluations/received?`;
     if (phaseId) {
       url += `phaseId=${phaseId}`;
     } else if (projectId) {
@@ -5865,7 +5866,7 @@ const loadTaskAssignmentData = async (projectId) => {
     if (!isLeader) {
       console.log('User is not a leader, loading basic project data only');
       // Use the general dashboard endpoint for phase information
-      const response = await fetch(`http://localhost:5000/api/student/projects/${projectId}/dashboard`, {
+      const response = await fetch(`${API_BASE_URL}/api/student/projects/${projectId}/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -5905,7 +5906,7 @@ const loadTaskAssignmentData = async (projectId) => {
     
     // For leaders, first try the leader-specific endpoint
     console.log('🔍 Trying leader dashboard endpoint...');
-    const leaderResponse = await fetch(`http://localhost:5000/api/student/projects/${projectId}/leader-dashboard`, {
+    const leaderResponse = await fetch(`${API_BASE_URL}/api/student/projects/${projectId}/leader-dashboard`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -5968,7 +5969,7 @@ const loadTaskAssignmentData = async (projectId) => {
       console.log('🔍 This might indicate the user is a leader in a different project or group');
       
       // Fallback to general dashboard for phase information
-      const fallbackResponse = await fetch(`http://localhost:5000/api/student/projects/${projectId}/dashboard`, {
+      const fallbackResponse = await fetch(`${API_BASE_URL}/api/student/projects/${projectId}/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -6073,7 +6074,7 @@ const handleTaskSubmit = async (e) => {
       }
     }
     
-    const response = await fetch(`http://localhost:5000/api/student/projects/${selectedAssignProject.id}/tasks`, {
+    const response = await fetch(`${API_BASE_URL}/api/student/projects/${selectedAssignProject.id}/tasks`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -6134,7 +6135,7 @@ const loadAssignedTasks = async (projectId) => {
     console.log('🔍 Loading assigned tasks for project:', projectId);
     
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/student-leader/projects/${projectId}/assigned-tasks`, {
+    const response = await fetch(`${API_BASE_URL}/api/student-leader/projects/${projectId}/assigned-tasks`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
@@ -6177,7 +6178,7 @@ const handleEditTask = async (task) => {
   // Load task submissions to check if task has been submitted to
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/student/tasks/${task.id}/submissions`, {
+    const response = await fetch(`${API_BASE_URL}/api/student/tasks/${task.id}/submissions`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -6414,7 +6415,7 @@ const handleUpdateTask = async (e) => {
       }
     }
 
-    const response = await fetch(`http://localhost:5000/api/student/tasks/${editingTask.id}`, {
+    const response = await fetch(`${API_BASE_URL}/api/student/tasks/${editingTask.id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -6483,7 +6484,7 @@ const handleDeleteTask = async (task) => {
   try {
     const token = localStorage.getItem('token');
     
-    const response = await fetch(`http://localhost:5000/api/student/tasks/${task.id}`, {
+    const response = await fetch(`${API_BASE_URL}/api/student/tasks/${task.id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -6585,7 +6586,7 @@ const loadAssignedTasksWithCounts = async (projectId) => {
     console.log('🔍 Loading assigned tasks with member counts for project:', projectId);
     
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/student-leader/projects/${projectId}/assigned-tasks`, {
+    const response = await fetch(`${API_BASE_URL}/api/student-leader/projects/${projectId}/assigned-tasks`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
@@ -7501,7 +7502,7 @@ const handleRejectExtension = async () => {
   // Call debug endpoint to understand user memberships
   const debugUserGroups = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/student/debug/groups', {
+      const response = await fetch('${API_BASE_URL}/api/student/debug/groups', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -17560,7 +17561,7 @@ const renderTaskAssignment = () => {
   const loadTaskAssignmentTasks = async (projectId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/student-leader/projects/${projectId}/assigned-tasks`, {
+      const response = await fetch(`${API_BASE_URL}/api/student-leader/projects/${projectId}/assigned-tasks`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -22161,7 +22162,7 @@ const DeliverablePhaseDetails = ({ phase, project, groupData, onSubmit }) => {
       
       // Fetch tasks organized by member for this project and phase
       const response = await fetch(
-        `http://localhost:5000/api/student/phase-member-tasks?projectId=${project.id}&phaseId=${phase.id}`,
+        `${API_BASE_URL}/api/student/phase-member-tasks?projectId=${project.id}&phaseId=${phase.id}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -23252,7 +23253,7 @@ const DeliverablePhaseDetails = ({ phase, project, groupData, onSubmit }) => {
                       <img
                         src={member.profile_image_url.startsWith('http') 
                           ? member.profile_image_url 
-                          : `http://localhost:5000${member.profile_image_url}`}
+                          : `${API_BASE_URL}${member.profile_image_url}`}
                         alt={memberName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
@@ -23681,7 +23682,7 @@ const DeliverablePhaseDetails = ({ phase, project, groupData, onSubmit }) => {
                       <img
                         src={member.profile_image_url.startsWith('http') 
                           ? member.profile_image_url 
-                          : `http://localhost:5000${member.profile_image_url}`}
+                          : `${API_BASE_URL}${member.profile_image_url}`}
                         alt={memberName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
@@ -24009,7 +24010,7 @@ const DeliverablePhaseDetails = ({ phase, project, groupData, onSubmit }) => {
                           <img
                             src={member.profile_image_url.startsWith('http')
                               ? member.profile_image_url
-                              : `http://localhost:5000${member.profile_image_url}`}
+                              : `${API_BASE_URL}${member.profile_image_url}`}
                             alt={memberName}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
@@ -25291,7 +25292,7 @@ const DeliverableProjectDetails = ({ project, projectSubmission, groupData, onSu
       
       // Fetch all tasks for all members in this project (not phase-specific)
       const response = await fetch(
-        `http://localhost:5000/api/student/project-member-tasks?projectId=${project.id}`,
+        `${API_BASE_URL}/api/student/project-member-tasks?projectId=${project.id}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -26510,7 +26511,7 @@ const DeliverableProjectDetails = ({ project, projectSubmission, groupData, onSu
                       <img
                         src={member.profile_image_url.startsWith('http') 
                           ? member.profile_image_url 
-                          : `http://localhost:5000${member.profile_image_url}`}
+                          : `${API_BASE_URL}${member.profile_image_url}`}
                         alt={memberName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
@@ -27354,7 +27355,7 @@ const DeliverableProjectDetails = ({ project, projectSubmission, groupData, onSu
                       <img
                         src={member.profile_image_url.startsWith('http') 
                           ? member.profile_image_url 
-                          : `http://localhost:5000${member.profile_image_url}`}
+                          : `${API_BASE_URL}${member.profile_image_url}`}
                         alt={memberName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
@@ -27720,7 +27721,7 @@ const DeliverableProjectDetails = ({ project, projectSubmission, groupData, onSu
                           <img
                             src={member.profile_image_url.startsWith('http')
                               ? member.profile_image_url
-                              : `http://localhost:5000${member.profile_image_url}`}
+                              : `${API_BASE_URL}${member.profile_image_url}`}
                             alt={memberName}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
@@ -33937,7 +33938,7 @@ const TaskGroupCard = ({ taskGroup, onApprove, onRequestRevision }) => {
                                       <img
                                         src={taskGroup.profile_image_url.startsWith('http')
                                           ? taskGroup.profile_image_url
-                                          : `http://localhost:5000${taskGroup.profile_image_url}`}
+                                          : `${API_BASE_URL}${taskGroup.profile_image_url}`}
                                         alt={taskGroup.student_name}
                                         onError={(e) => {
                                           e.target.style.display = 'none';
@@ -34440,7 +34441,7 @@ const TaskGroupCard = ({ taskGroup, onApprove, onRequestRevision }) => {
                                     <img
                                       src={feedback.profile_image_url.startsWith('http')
                                         ? feedback.profile_image_url
-                                        : `http://localhost:5000${feedback.profile_image_url}`}
+                                        : `${API_BASE_URL}${feedback.profile_image_url}`}
                                       alt={feedback.reviewer_name}
                                       onError={(e) => {
                                         e.target.style.display = 'none';
@@ -47698,3 +47699,4 @@ const MemberModal = () => {
 };
 
 export default CourseStudentDashboard;
+

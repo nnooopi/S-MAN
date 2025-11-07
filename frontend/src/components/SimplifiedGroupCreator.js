@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, Shuffle, User, Lock } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 
 const SimplifiedGroupCreator = ({ courseId, students, groups, studentToAssign, onClose, onGroupsCreated, getSupabaseImageUrl }) => {
   // Get the highest existing group number for proper numbering
@@ -58,19 +59,19 @@ const SimplifiedGroupCreator = ({ courseId, students, groups, studentToAssign, o
         
         // If it already starts with /api/files, return it
         if (imagePath.startsWith('/api/files/')) {
-          return `http://localhost:5000${imagePath}`;
+          return `${API_BASE_URL}${imagePath}`;
         }
         
         // Otherwise construct the backend API endpoint URL
         // Backend serves files via /api/files/:userId/:filename
         if (studentId) {
-          return `http://localhost:5000/api/files/${studentId}/${imagePath}`;
+          return `${API_BASE_URL}/api/files/${studentId}/${imagePath}`;
         }
         
         // Fallback: try to extract student ID from the path if it's in format: studentId/filename
         const pathParts = imagePath.split('/');
         if (pathParts.length >= 2) {
-          return `http://localhost:5000/api/files/${pathParts[0]}/${pathParts[1]}`;
+          return `${API_BASE_URL}/api/files/${pathParts[0]}/${pathParts[1]}`;
         }
         
         return null;
@@ -349,7 +350,7 @@ const SimplifiedGroupCreator = ({ courseId, students, groups, studentToAssign, o
       }
 
       const response = await fetch(
-        `http://localhost:5000/api/professor/course/${courseId}/create-groups-enhanced`,
+        `${API_BASE_URL}/api/professor/course/${courseId}/create-groups-enhanced`,
         {
           method: 'POST',
           headers: {

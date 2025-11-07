@@ -4,7 +4,7 @@ import './CourseProfessorDashboard.css';
 import './ProjectsLandingStyles.css';
 import './GroupsStyles.css';
 import './GroupModalStyles.css';
-import { apiConfig } from '../config/api';
+import { apiConfig, API_BASE_URL } from '../config/api';
 import EditProjectModal from './EditProjectModal';
 import WarningModal from './WarningModal';
 import AnnouncementModal from './AnnouncementModal';
@@ -806,7 +806,7 @@ const CourseProfessorDashboard = () => {
   const handleJoinRequestAction = async (requestId, action) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/professor/join-request/${requestId}/${action}`,
+        `${API_BASE_URL}/api/professor/join-request/${requestId}/${action}`,
         {
           method: 'POST',
           headers: {
@@ -845,7 +845,7 @@ const CourseProfessorDashboard = () => {
       }]);
 
       const response = await fetch(
-        `http://localhost:5000/api/professor/course/${courseId}/groups/${groupId}/delete-complete`,
+        `${API_BASE_URL}/api/professor/course/${courseId}/groups/${groupId}/delete-complete`,
         {
           method: 'DELETE',
           headers: {
@@ -900,7 +900,7 @@ const CourseProfessorDashboard = () => {
       let projectsData = projects;
       if (!projectsData || projectsData.length === 0) {
         const projectsResponse = await fetch(
-          `http://localhost:5000/api/professor/course/${courseId}/projects`,
+          `${API_BASE_URL}/api/professor/course/${courseId}/projects`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -937,7 +937,7 @@ const CourseProfessorDashboard = () => {
 
       // Fetch students with group information for grade sheet
       const studentsResponse = await fetch(
-        `http://localhost:5000/api/professor/course/${courseId}/grade-sheet-students`,
+        `${API_BASE_URL}/api/professor/course/${courseId}/grade-sheet-students`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1440,7 +1440,7 @@ const CourseProfessorDashboard = () => {
     const fetchProfessorProfile = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/professor/profile', {
+        const response = await fetch('${API_BASE_URL}/api/professor/profile', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1634,7 +1634,7 @@ const CourseProfessorDashboard = () => {
       
       const token = localStorage.getItem('token');
       
-      const coursesResponse = await fetch('http://localhost:5000/api/professor/courses', {
+      const coursesResponse = await fetch('${API_BASE_URL}/api/professor/courses', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -1647,7 +1647,7 @@ const CourseProfessorDashboard = () => {
           setLastUpdated(new Date());
           
           // Fetch students with images
-          const studentsResponse = await fetch(`http://localhost:5000/api/professor/course/${courseId}/students-with-images`, {
+          const studentsResponse = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/students-with-images`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
@@ -1830,7 +1830,7 @@ const CourseProfessorDashboard = () => {
   const fetchGroups = async (showNotification = true) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/professor/course/${courseId}/groups`, {
+      const response = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/groups`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -1858,7 +1858,7 @@ const CourseProfessorDashboard = () => {
   const fetchProjects = async (showNotification = true) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/professor/course/${courseId}/projects`, {
+      const response = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/projects`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -1884,7 +1884,7 @@ const CourseProfessorDashboard = () => {
   const fetchSubmissions = async (projectId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/professor/projects/${projectId}/submissions`, {
+      const response = await fetch(`${API_BASE_URL}/api/professor/projects/${projectId}/submissions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -1916,7 +1916,7 @@ const CourseProfessorDashboard = () => {
       
       // Fetch all phase deliverable submissions for this course
       const phaseResponse = await fetch(
-        `http://localhost:5000/api/professor/courses/${courseId}/phase-deliverable-submissions`,
+        `${API_BASE_URL}/api/professor/courses/${courseId}/phase-deliverable-submissions`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1927,7 +1927,7 @@ const CourseProfessorDashboard = () => {
       
       // Fetch all project deliverable submissions for this course
       const projectResponse = await fetch(
-        `http://localhost:5000/api/professor/courses/${courseId}/project-deliverable-submissions`,
+        `${API_BASE_URL}/api/professor/courses/${courseId}/project-deliverable-submissions`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1993,7 +1993,7 @@ const CourseProfessorDashboard = () => {
   const fetchJoinRequests = async (showNotification = true) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/professor/course/${courseId}/join-requests`, {
+      const response = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/join-requests`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -2010,7 +2010,7 @@ const CourseProfessorDashboard = () => {
   const fetchRecentSubmissions = async (showNotification = true) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/professor/course/${courseId}/recent-submissions`, {
+      const response = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/recent-submissions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -2027,7 +2027,7 @@ const CourseProfessorDashboard = () => {
   const fetchSubmissionActivity = async (showNotification = true) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/professor/course/${courseId}/submission-activity`, {
+      const response = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/submission-activity`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -2069,7 +2069,7 @@ const CourseProfessorDashboard = () => {
       console.log('🔄 Fetching task and revision submissions for courseId:', courseId);
       
       // Fetch task submissions
-      const taskResponse = await fetch(`http://localhost:5000/api/professor/course/${courseId}/task-submissions`, {
+      const taskResponse = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/task-submissions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -2083,7 +2083,7 @@ const CourseProfessorDashboard = () => {
       }
 
       // Fetch revision submissions
-      const revisionResponse = await fetch(`http://localhost:5000/api/professor/course/${courseId}/revision-submissions`, {
+      const revisionResponse = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/revision-submissions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -2110,7 +2110,7 @@ const CourseProfessorDashboard = () => {
       // First test if auth works
       try {
         const testResponse = await fetch(
-          `http://localhost:5000/api/professor/test-auth`,
+          `${API_BASE_URL}/api/professor/test-auth`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -2128,7 +2128,7 @@ const CourseProfessorDashboard = () => {
       
       // Fetch all phase deliverable submissions for this course
       const phaseResponse = await fetch(
-        `http://localhost:5000/api/professor/courses/${courseId}/phase-deliverable-submissions`,
+        `${API_BASE_URL}/api/professor/courses/${courseId}/phase-deliverable-submissions`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -2139,7 +2139,7 @@ const CourseProfessorDashboard = () => {
       
       // Fetch all project deliverable submissions for this course
       const projectResponse = await fetch(
-        `http://localhost:5000/api/professor/courses/${courseId}/project-deliverable-submissions`,
+        `${API_BASE_URL}/api/professor/courses/${courseId}/project-deliverable-submissions`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -4583,7 +4583,7 @@ const CourseProfessorDashboard = () => {
                   try {
                     setLoading(true);
                     const token = localStorage.getItem('token');
-                    const response = await fetch(`http://localhost:5000/api/professor/course/${courseId}/delete-all-groups`, {
+                    const response = await fetch(`${API_BASE_URL}/api/professor/course/${courseId}/delete-all-groups`, {
                       method: 'DELETE',
                       headers: {
                         'Authorization': `Bearer ${token}`,
@@ -7095,7 +7095,7 @@ const CourseProfessorDashboard = () => {
     const handleJoinRequest = async (requestId, action) => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/professor/course/${courseId}/join-requests/${requestId}`,
+          `${API_BASE_URL}/api/professor/course/${courseId}/join-requests/${requestId}`,
           {
             method: 'PUT',
             headers: {
@@ -7637,7 +7637,7 @@ const CourseProfessorDashboard = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:5000/api/announcements/${announcementId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/announcements/${announcementId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -19921,4 +19921,5 @@ const CourseProfessorDashboard = () => {
 };
 
 export default CourseProfessorDashboard;
+
 

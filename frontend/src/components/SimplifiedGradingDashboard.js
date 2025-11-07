@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText, Clock, User, Download, AlertCircle, ChevronDown } from 'lucide-react';
 import './SimplifiedGradingDashboard.css';
+import { API_BASE_URL as BASE_URL } from '../config/api';
 
-const API_BASE_URL = 'http://localhost:5000/api/grading-clean';
+const API_BASE_URL = `${BASE_URL}/api/grading-clean`;
 
 const SimplifiedGradingDashboard = ({ courseId, projectId, onBack }) => {
   const [project, setProject] = useState(null);
