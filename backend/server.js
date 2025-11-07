@@ -48,16 +48,6 @@ app.use(express.json({
   }
 }));
 
-// Serve frontend build files if they exist
-if (buildPathExists) {
-  console.log('📁 [INIT] Serving frontend from:', frontendBuildPath);
-  app.use(express.static(frontendBuildPath));
-} else {
-  console.log('⚠️  [WARNING] Frontend build folder not found at:', frontendBuildPath);
-}
-
-
-
 // Supabase client with service role for admin operations
 const supabase = createClient(
   process.env.SUPABASE_URL || 'https://qorkowgfjjuwxelumuut.supabase.co',
@@ -17203,42 +17193,8 @@ app.get('/api/student/debug/group-membership-detailed', authenticateStudent, asy
   }
 });
 
-// =================== SPA CATCH-ALL MIDDLEWARE ===================
-// This MUST be the last middleware - it handles client-side routing for React Router
-// Serve index.html for all non-API routes so React Router can handle navigation
-if (buildPathExists) {
-  app.use((req, res, next) => {
-    // Only handle GET requests
-    if (req.method !== 'GET') {
-      return next();
-    }
-    
-    // Don't intercept API routes
-    if (req.path.startsWith('/api/')) {
-      return next();
-    }
-    
-    // Don't intercept file requests (has extension)
-    if (path.extname(req.path)) {
-      return next();
-    }
-    
-    console.log(`🔄 [SPA] Serving index.html for route: ${req.path}`);
-    res.sendFile(path.join(frontendBuildPath, 'index.html'));
-  });
-}
-
-// =================== SERVER STARTUP ===================
-
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Database: ${process.env.SUPABASE_URL ? 'Connected' : 'Not configured'}`);
-  console.log(`📧 Email: ${process.env.SENDGRID_API_KEY ? 'Configured' : 'Not configured'}`);
-  console.log(`✅ Course Management System: Ready`);
-  console.log(`🔐 Authentication: Admin, Professor, Student`);
-});
+// =================== SERVER STARTUP MOVED TO END OF FILE ===================
+// Routes defined after app.listen() won't work, so we moved it to the very end
 
 // Serve task submission files
 app.get('/api/files/task-submissions/:submissionId/:filename', authenticateStudent, async (req, res) => {
@@ -19534,6 +19490,33 @@ app.get('/api/student/projects/:projectId/phase-deliverable-submissions', authen
       details: error.message 
     });
   }
+});
+
+// =================== SERVE FRONTEND (MUST BE LAST) ===================
+// Serve static files from the React app
+if (buildPathExists) {
+  console.log('📁 [INIT] Serving frontend from:', frontendBuildPath);
+  app.use(express.static(frontendBuildPath));
+  
+  // Catch-all handler: send back React's index.html for any non-API routes
+  // This MUST be defined AFTER all API routes
+  app.get('*', (req, res) => {
+    // Only serve index.html for non-API routes
+    if (!req.path.startsWith('/api/')) {
+      res.sendFile(path.join(frontendBuildPath, 'index.html'));
+    } else {
+      res.status(404).json({ error: 'API endpoint not found' });
+    }
+  });
+} else {
+  console.log('⚠️  [WARNING] Frontend build folder not found at:', frontendBuildPath);
+}
+
+// Start server
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Graceful shutdown

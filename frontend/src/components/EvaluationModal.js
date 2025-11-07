@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaTimes, FaCalendarAlt, FaClock, FaUser, FaCheckCircle, FaExclamationTriangle, FaDownload, FaUpload, FaSave, FaFileAlt, FaClipboardList, FaCheckDouble, FaListAlt, FaUsers, FaCheck, FaCrown } from 'react-icons/fa';
-import dayjs from 'dayjs';
+import { FaTimes, FaCalendarAlt, FaClock, FaUser, FaCheckCircle, FaExclamationTriangle, FaDownload, FaUpload, FaSave, FaFileAlt, FaClipboardList, FaCheckDouble, FaListAlt, FaUsers, FaCheck } from 'react-icons/fa';
+import { API_BASE_URL } from '../config/api';
 
 // Helper function to get profile image URL
 const getProfileImageUrl = (member) => {
@@ -8,7 +8,7 @@ const getProfileImageUrl = (member) => {
   return member.profile_image_url;
 };
 
-const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupData, currentUser, onEvaluationSubmitted }) => {
+const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupData, currentUser }) => {
   const [isModalLoading, setIsModalLoading] = useState(false);
   const [groupMembers, setGroupMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
@@ -32,87 +32,13 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
   const [uploading, setUploading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, saved, error
   const [saveError, setSaveError] = useState(null);
-  const [submissionStatus, setSubmissionStatus] = useState(null); // Track submission status from backend
-  
-  // File preview state
-  const [showFilePreview, setShowFilePreview] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null); // Store the selected file object
   
   // Auto-save debounce timer
   const autoSaveTimer = useRef(null);
 
-  // Check if evaluation is past due date or already submitted
-  const isPastDueDate = () => {
-    if (!evaluation?.due_date) return false;
-    const dueDate = new Date(evaluation.due_date);
-    const now = new Date();
-    return now > dueDate;
-  };
-
-  const isReadOnly = isPastDueDate() || evaluation?.status === 'submitted' || submissionStatus === 'submitted' || evaluationData?.submitted_at;
-
-  // Load submission status to check if already submitted
-  const loadSubmissionStatus = async () => {
-    try {
-      if (!evaluation?.phase_id || !evaluation?.group_id) return;
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:5000/api/student/groups/${evaluation.group_id}/evaluations/my-submissions?phaseId=${evaluation.phase_id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const submissions = data.submissions || [];
-        console.log('📊 [MODAL] Loaded submissions:', submissions);
-        
-        if (submissions.length > 0) {
-          const submission = submissions[0];
-          console.log('✅ [MODAL] Found submission with status:', submission.status);
-          
-          // Set submission status state
-          setSubmissionStatus(submission.status);
-          
-          // Update evaluation object with actual submission status
-          if (submission.status === 'submitted') {
-            evaluation.status = 'submitted';
-            console.log('🔄 [MODAL] Updated evaluation status to submitted');
-          }
-          
-          // Load submission data
-          if (submission.evaluation_data) {
-            setEvaluationData(submission.evaluation_data);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error loading submission status:', error);
-    }
-  };
-
   useEffect(() => {
     if (isOpen && evaluation) {
       setIsModalLoading(true);
-      
-      // ✅ FIX: Reset evaluationData state when modal opens to prevent showing previous phase's data
-      console.log('🔄 [MODAL OPEN] Resetting evaluation data for phase:', evaluation.phase_id, evaluation.phase_title);
-      setEvaluationData({
-        evaluated_members: {},
-        progress: {},
-        aggregate_total: 0
-      });
-      
-      // Reset file upload state for custom evaluations
-      setSelectedFile(null);
-      setUploadedFileName(null);
-      
       // Reset page to 'phase-details' for built-in evaluations
       const isBuiltIn = evaluation.is_custom_evaluation === false;
       if (isBuiltIn) {
@@ -138,55 +64,13 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
           setGroupMembers(groupData.members);
         }
       }
-      
-      // Load submission status first to check if already submitted
-      loadSubmissionStatus();
-      
-      // Load existing submission data if available (for phase/project evaluation cards)
-      if (evaluation.submission_data) {
-        console.log('✅ Loading existing submission data:', evaluation.submission_data);
-        setEvaluationData(evaluation.submission_data);
-      } else if (evaluation.id && !evaluation.id.startsWith('phase-eval-') && !evaluation.id.startsWith('project-eval-')) {
-        // Only load existing evaluation if it has a valid submission ID (not a phase/project card ID)
+      // Only load existing evaluation if it has a valid submission ID (not a phase card ID)
+      if (evaluation.id && !evaluation.id.startsWith('phase-eval-')) {
         loadExistingEvaluation();
-      } else {
-        console.log('ℹ️ No submission data to load for this evaluation');
       }
-      // If it's a phase evaluation, check if we have criteria or need to load them
-      if (evaluation.type === 'phase_evaluation') {
-        // Check if criteria are already in the evaluation object (could be in criteria or evaluation_criteria field)
-        const existingCriteria = evaluation.criteria || evaluation.evaluation_criteria || [];
-        if (existingCriteria && existingCriteria.length > 0) {
-          console.log('✅ Using criteria from evaluation object:', existingCriteria);
-          setPhaseEvaluationCriteria(existingCriteria);
-          // Also set the form data if available
-          if (evaluation.evaluation_total_points || evaluation.total_points) {
-            setPhaseEvaluationForm({
-              total_points: evaluation.evaluation_total_points || evaluation.total_points || 100,
-              criteria: existingCriteria
-            });
-          }
-        } else {
-          console.log('⚠️ No criteria in evaluation object, loading from API');
-          loadPhaseEvaluationForm();
-        }
-      }
-      // If it's a project evaluation, check if we have criteria or need to load them
-      if (evaluation.type === 'project_evaluation') {
-        const existingCriteria = evaluation.criteria || evaluation.evaluation_criteria || [];
-        if (existingCriteria && existingCriteria.length > 0) {
-          console.log('✅ Using criteria from project evaluation object:', existingCriteria);
-          setPhaseEvaluationCriteria(existingCriteria);
-          if (evaluation.evaluation_total_points || evaluation.total_points) {
-            setPhaseEvaluationForm({
-              total_points: evaluation.evaluation_total_points || evaluation.total_points || 100,
-              criteria: existingCriteria
-            });
-          }
-        } else {
-          console.log('⚠️ No criteria in project evaluation object, loading from API');
-          loadProjectEvaluationForm();
-        }
+      // If it's a phase evaluation without criteria yet, load the evaluation form
+      if (evaluation.type === 'phase_evaluation' && !evaluation.evaluation_criteria) {
+        loadPhaseEvaluationForm();
       }
       setTimeout(() => setIsModalLoading(false), 300);
     }
@@ -195,93 +79,12 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
   // Load phase evaluation form details from backend
   const loadPhaseEvaluationForm = async () => {
     try {
-      // Try to get phase ID from phase prop first, then from evaluation object
-      const phaseId = phase?.id || evaluation?.phase_id;
-      if (!phaseId) {
-        console.error('❌ Cannot load phase evaluation form: No phase ID available', { phase, evaluation });
-        return;
-      }
+      if (!phase?.id) return;
 
       const token = localStorage.getItem('token');
       
-      console.log('🔍 Loading phase evaluation form for phase ID:', phaseId);
-      
-      // Try multiple API endpoint patterns
-      let response = null;
-      let data = null;
-      
-      // Try endpoint 1: /api/phases/{phaseId}/evaluation-form
-      response = await fetch(`/api/phases/${phaseId}/evaluation-form`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        data = await response.json();
-        console.log('✅ Phase evaluation form loaded from /api/phases:', data);
-      } else {
-        // Try endpoint 2: /api/student/phases/{phaseId}/evaluation-form
-        console.log('⚠️ First endpoint failed, trying alternative endpoint');
-        response = await fetch(`/api/student/phases/${phaseId}/evaluation-form`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          data = await response.json();
-          console.log('✅ Phase evaluation form loaded from /api/student/phases:', data);
-        } else {
-          console.error('❌ Failed to load phase evaluation form from both endpoints. Status:', response.status);
-          const errorText = await response.text();
-          console.error('❌ Error response:', errorText);
-        }
-      }
-
-      if (data) {
-        // Handle different response structures
-        if (data.criteria && Array.isArray(data.criteria)) {
-          setPhaseEvaluationCriteria(data.criteria);
-          console.log('✅ Set criteria from data.criteria:', data.criteria.length, 'criteria');
-        } else if (data.form?.criteria && Array.isArray(data.form.criteria)) {
-          setPhaseEvaluationCriteria(data.form.criteria);
-          console.log('✅ Set criteria from data.form.criteria:', data.form.criteria.length, 'criteria');
-        } else if (Array.isArray(data)) {
-          setPhaseEvaluationCriteria(data);
-          console.log('✅ Set criteria from array response:', data.length, 'criteria');
-        } else {
-          console.warn('⚠️ Unexpected response structure:', data);
-        }
-        
-        // Set form data
-        if (data.form) {
-          setPhaseEvaluationForm(data.form);
-        } else if (data.total_points || evaluation?.evaluation_total_points) {
-          setPhaseEvaluationForm({
-            total_points: data.total_points || evaluation.evaluation_total_points || 100
-          });
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error loading phase evaluation form:', error);
-    }
-  };
-
-  // Load project evaluation form details from backend
-  const loadProjectEvaluationForm = async () => {
-    try {
-      if (!evaluation?.project_id) {
-        console.log('❌ No project_id in evaluation:', evaluation);
-        return;
-      }
-
-      const token = localStorage.getItem('token');
-      
-      // Fetch the project evaluation form
-      const response = await fetch(`http://localhost:5000/api/student/projects/${evaluation.project_id}/evaluation-form`, {
+      // Fetch the phase evaluation form for this phase
+      const response = await fetch(`/api/phases/${phase.id}/evaluation-form`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -290,20 +93,20 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Project evaluation form loaded:', data);
-        setPhaseEvaluationForm(data.form || data);
-        setPhaseEvaluationCriteria(data.criteria || data.form?.criteria || []);
+        console.log('✅ Phase evaluation form loaded:', data);
+        setPhaseEvaluationForm(data.form);
+        setPhaseEvaluationCriteria(data.criteria || []);
       } else {
-        console.warn('❌ Failed to load project evaluation form, status:', response.status);
+        console.warn('Failed to load phase evaluation form');
       }
     } catch (error) {
-      console.error('Error loading project evaluation form:', error);
+      console.error('Error loading phase evaluation form:', error);
     }
   };
 
   // Auto-save when evaluation data changes (for built-in evaluations)
   useEffect(() => {
-    if (!isOpen || !evaluation || evaluation.is_custom_evaluation || evaluation.id?.startsWith('phase-eval-') || evaluation.id?.startsWith('project-eval-')) return;
+    if (!isOpen || !evaluation || evaluation.is_custom_evaluation || evaluation.id?.startsWith('phase-eval-')) return;
 
     // Clear existing timer
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
@@ -325,7 +128,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       const groupId = project?.group_id || evaluation?.group_id;
       if (!token || !groupId) return;
 
-      const response = await fetch(`http://localhost:5000/api/student/groups/${groupId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/student/groups/${groupId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -380,7 +183,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       if (!evaluation.id) return;
       
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/evaluations/submission/${evaluation.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/evaluations/submission/${evaluation.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -399,8 +202,8 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
 
   // Auto-save evaluation (only saves if changed)
   const autoSaveEvaluation = async () => {
-    // Skip auto-save for phase/project evaluations (IDs start with 'phase-eval-' or 'project-eval-')
-    if (!evaluation.id || evaluation.is_custom_evaluation || evaluation.id.startsWith('phase-eval-') || evaluation.id.startsWith('project-eval-')) {
+    // Skip auto-save for phase evaluations (ID starts with 'phase-eval-')
+    if (!evaluation.id || evaluation.is_custom_evaluation || evaluation.id.startsWith('phase-eval-')) {
       return;
     }
 
@@ -409,7 +212,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       setSaveError(null);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/evaluations/submission/${evaluation.id}/save`, {
+      const response = await fetch(`${API_BASE_URL}/api/evaluations/submission/${evaluation.id}/save`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -436,72 +239,22 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
   };
 
   const getHeaderColor = (evaluation) => {
-    // Pink for phase evaluations
-    return '#ec4899';
-  };
-
-  const getPhaseEvaluationStatus = () => {
-    const now = new Date();
-    const availableFrom = evaluation?.available_from ? new Date(evaluation.available_from) : null;
-    const dueDate = evaluation?.due_date ? new Date(evaluation.due_date) : null;
-    
-    // ✅ FIX: Check if already submitted (from card status, backend status, or timestamp)
-    if (evaluation?.status === 'submitted' || submissionStatus === 'submitted') return 'submitted';
-    
-    // ✅ FIX: Check for actual submission timestamps (not just initialized data)
-    if (evaluationData?.submitted_at || evaluation?.submission_date) return 'submitted';
-    
-    // ✅ FIX: Check if there are actual scores AND a submission ID (means it was loaded from backend)
-    if (evaluationData?.evaluated_members && Object.keys(evaluationData.evaluated_members).length > 0) {
-      const hasActualScores = Object.values(evaluationData.evaluated_members).some(member => 
-        member?.criteria && Object.keys(member.criteria).length > 0 && member.total > 0
-      );
-      if (hasActualScores && evaluation?.submission_id) {
-        return 'submitted';
-      }
-    }
-    
-    // If not yet available
-    if (availableFrom && now < availableFrom) return 'upcoming';
-    
-    // If past due date (and not submitted)
-    if (dueDate && now > dueDate) return 'missed';
-    
-    // If within the evaluation window OR no dates set (always available)
-    // Case 1: Both dates set and within window
-    if (availableFrom && dueDate && now >= availableFrom && now <= dueDate) return 'ongoing';
-    
-    // Case 2: Only dueDate set (available from start) and not past due
-    if (!availableFrom && dueDate && now <= dueDate) return 'ongoing';
-    
-    // Case 3: Only availableFrom set (no deadline) and already available
-    if (availableFrom && !dueDate && now >= availableFrom) return 'ongoing';
-    
-    // Case 4: No dates set at all (always available)
-    if (!availableFrom && !dueDate) return 'ongoing';
-    
-    return 'upcoming';
-  };
-
-  const getStatusPillColor = () => {
-    const status = getPhaseEvaluationStatus();
-    switch(status) {
-      case 'upcoming': return '#ec4899'; // Light pink
-      case 'ongoing': return '#be185d'; // Darker pink
-      case 'submitted': return '#831843'; // Even darker pink
-      case 'missed': return '#500724'; // Darkest pink
-      default: return '#ec4899';
-    }
-  };
-
-  const getStatusPillText = () => {
-    const status = getPhaseEvaluationStatus();
-    switch(status) {
-      case 'upcoming': return 'Upcoming';
-      case 'ongoing': return 'Ongoing';
-      case 'submitted': return 'Submitted';
-      case 'missed': return 'Missed';
-      default: return status;
+    const status = evaluation?.status || 'pending';
+    switch (status) {
+      case 'active':
+        return '#34656D'; // Teal
+      case 'pending':
+        return '#f59e0b'; // Orange
+      case 'due':
+        return '#f59e0b'; // Orange
+      case 'submitted':
+        return '#10b981'; // Green
+      case 'completed':
+        return '#10b981'; // Green
+      case 'late':
+        return '#d97706'; // Dark Orange
+      default:
+        return '#6b7280'; // Gray
     }
   };
 
@@ -513,7 +266,6 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
   const formatDateTime = (dateString) => {
     if (!dateString) return 'Not set';
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid date';
     return date.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -577,27 +329,7 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
   };
 
   const canGoNext = () => {
-    // Can't go next if on submission page
-    if (currentPage === 'submission') return false;
-    
-    // If on phase-details, can always go next
-    if (currentPage === 'phase-details') return true;
-    
-    // If on member page, check if all criteria are filled
-    if (currentPage.startsWith('member-')) {
-      const currentMember = groupMembers[currentMemberIndex];
-      if (!currentMember) return false;
-      
-      // Check if all criteria have scores
-      const allCriteriaFilled = phaseEvaluationCriteria?.every(criterion => {
-        const score = evaluationData.evaluated_members[currentMember.student_id]?.criteria[criterion.id];
-        return score !== undefined && score !== null && score !== '' && score !== 0;
-      });
-      
-      return allCriteriaFilled || false;
-    }
-    
-    return false;
+    return currentPage !== 'submission';
   };
 
   // Handle criterion score change (updates aggregated data)
@@ -650,13 +382,11 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
 
   // Handle PDF download for custom evaluations
   const handleDownloadPDF = () => {
-    if (evaluation.file_url || evaluation.custom_file_url) {
+    if (evaluation.file_url) {
       try {
-        const fileUrl = evaluation.file_url || evaluation.custom_file_url;
         const link = document.createElement('a');
-        link.href = fileUrl;
-        link.download = evaluation.file_name || evaluation.custom_file_name || 'evaluation-form.pdf';
-        link.target = '_blank';
+        link.href = evaluation.file_url;
+        link.download = evaluation.file_name || 'evaluation-form.pdf';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -667,40 +397,10 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
     }
   };
 
-  // Handle PDF view/preview for custom evaluations
-  const handleViewPDF = () => {
-    setShowFilePreview(true);
-  };
-
-  // Handle file selection for custom evaluations (doesn't upload yet)
-  const handleFileUpload = (e) => {
+  // Handle PDF upload for custom evaluations
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
-    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!validTypes.includes(file.type)) {
-      alert('Please upload a PDF, DOC, or DOCX file');
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
-      return;
-    }
-
-    // Store the file and filename
-    setSelectedFile(file);
-    setUploadedFileName(file.name);
-  };
-
-  // Handle submission of custom evaluation with file
-  const handleSubmitCustomEvaluation = async () => {
-    if (!selectedFile) {
-      alert('Please select a file before submitting');
-      return;
-    }
 
     try {
       setUploading(true);
@@ -709,55 +409,35 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       reader.onload = async (event) => {
         const base64 = event.target?.result;
         
-        // Extract required fields from evaluation object
-        const phase_id = evaluation.phase_id;
-        const group_id = evaluation.group_id || groupData?.group_id || groupData?.id;
-        const project_id = evaluation.project_id || project?.id;
-        
-        console.log('📊 [CUSTOM EVAL SUBMIT] Extracted IDs:', { phase_id, group_id, project_id });
-        
-        if (!phase_id || !group_id) {
-          alert('❌ Missing required information (phase_id or group_id)');
-          setUploading(false);
-          return;
-        }
-        
-        // Submit to backend - for custom evaluations with file
+        // Submit to backend - aggregated model for custom evaluations
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/evaluations/phase-custom/submit`, {
+        const response = await fetch(`${API_BASE_URL}/api/evaluations/submission/${evaluation.id}/submit`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            phase_id,
-            group_id,
-            project_id,
             file_submission_url: base64,
-            file_name: selectedFile.name,
-            is_custom_evaluation: true,
+            file_name: file.name,
             status: 'submitted'
           })
         });
 
         if (response.ok) {
-          alert('✅ Evaluation submitted successfully!');
-          if (onEvaluationSubmitted) {
-            onEvaluationSubmitted(evaluation.id);
-          }
-          setTimeout(() => onClose(), 500);
+          alert('Evaluation submitted successfully!');
+          onClose();
         } else {
           const error = await response.json();
-          alert(`❌ Failed to upload evaluation: ${error.message || error.error || 'Unknown error'}`);
+          alert(`Failed to upload evaluation: ${error.message}`);
         }
         setUploading(false);
       };
       
-      reader.readAsDataURL(selectedFile);
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error('Error uploading file:', error);
-      alert('❌ Failed to upload evaluation');
+      alert('Failed to upload evaluation');
       setUploading(false);
     }
   };
@@ -765,12 +445,6 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
   // Submit entire aggregated evaluation (all members at once)
   const handleSubmitAggregatedEvaluation = async () => {
     try {
-      // Check if already submitted
-      if (submissionStatus === 'submitted' || evaluation?.status === 'submitted' || evaluationData?.submitted_at) {
-        alert('This evaluation has already been submitted and cannot be re-submitted');
-        return;
-      }
-
       // Validate that at least one member has been scored
       const hasScores = Object.values(evaluationData.evaluated_members || {})
         .some(member => member.total > 0);
@@ -783,40 +457,16 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       setUploading(true);
       const token = localStorage.getItem('token');
       
-      // Extract required fields from evaluation object
-      const phase_id = evaluation.phase_id || evaluation.id?.split('-')[1];
-      const group_id = evaluation.group_id || groupData?.group_id || groupData?.id;
-      const project_id = evaluation.project_id || evaluation.project?.id || project?.id;
-      
-      console.log('📊 [SUBMIT DEBUG] Extracted IDs:', { phase_id, group_id, project_id });
-      console.log('📊 [SUBMIT DEBUG] Evaluation object keys:', Object.keys(evaluation));
-      console.log('📊 [SUBMIT DEBUG] GroupData:', groupData);
-      
-      // Mark all members as completed and add required fields
+      // Mark all members as completed
       const completedEvalData = {
         ...evaluationData,
-        phase_id,
-        group_id,
-        project_id,
-        phase_evaluation_form_id: phaseEvaluationForm?.id,
         progress: Object.keys(evaluationData.progress || {}).reduce((acc, memberId) => ({
           ...acc,
           [memberId]: evaluationData.evaluated_members[memberId].total > 0 ? 'submitted' : evaluationData.progress[memberId]
         }), {})
       };
-      
-      console.log('📊 [SUBMIT DEBUG] Final completedEvalData:', completedEvalData);
 
-      // Import apiConfig at the top if not already imported
-      // Determine the correct endpoint based on evaluation type
-      let endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/evaluations/submission/${evaluation.id}/submit`;
-      if (evaluation.type === 'phase_evaluation') {
-        endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/evaluations/submission/${evaluation.id}/submit`;
-      } else if (evaluation.type === 'project_evaluation') {
-        endpoint = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/project-evaluations/${evaluation.id}/submit`;
-      }
-
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE_URL}/api/evaluations/submission/${evaluation.id}/submit`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -829,23 +479,13 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
       });
 
       if (response.ok) {
-        console.log('✅ [SUBMIT SUCCESS] Evaluation submitted successfully');
-        // Update evaluation status to submitted
-        evaluation.status = 'submitted';
-        alert('Evaluation submitted successfully!');
-        setUploading(false);
-        // Notify parent component to refresh evaluation data
-        if (onEvaluationSubmitted) {
-          onEvaluationSubmitted(evaluation.id);
-        }
-        // Close modal after brief delay to show success
-        setTimeout(() => onClose(), 500);
+        alert('Evaluation submitted successfully for all members!');
+        onClose();
       } else {
         const error = await response.json();
-        console.error('❌ [SUBMIT ERROR]', error);
-        alert(`Failed to submit evaluation: ${error.message || error.error}`);
-        setUploading(false);
+        alert(`Failed to submit evaluation: ${error.message}`);
       }
+      setUploading(false);
     } catch (error) {
       console.error('Error submitting aggregated evaluation:', error);
       alert('Failed to submit evaluation');
@@ -870,80 +510,78 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
   const evalData = evaluationNormalized;
 
   // ========== BUILT-IN EVALUATION PAGE RENDERING FUNCTIONS ==========
-
+  
   // Page 1: Phase Details
-  const renderPhaseDetailsPage = () => {
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Not set';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid date';
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const getFileTypesDisplay = () => {
-    const fileTypes = phase?.file_types_allowed || evalData.file_types_allowed;
-    if (!fileTypes || fileTypes === '[]' || (Array.isArray(fileTypes) && fileTypes.length === 0)) {
-      return 'Any file type';
-    }
-    return fileTypes;
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+  const renderPhaseDetailsPage = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr 1fr',
-        gap: '1rem'
+        backgroundColor: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '1.5rem'
       }}>
-        <div>
-          <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>Phase</p>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: '#1f2937', fontWeight: '600' }}>
-            Phase {phase?.phase_number || evalData.phase_number}
-          </p>
-        </div>
+        <h3 style={{ margin: '0 0 1rem 0', color: '#1f2937', fontSize: '1.1rem', fontWeight: '600' }}>Phase Details</h3>
         
-        <div>
-          <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>Total Points</p>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: '#1f2937', fontWeight: '600' }}>
-            {evalData.total_points || 100}
-          </p>
-        </div>
-        
-        <div>
-          <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>Due Date</p>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: '#1f2937', fontWeight: '600' }}>
-            {formatDateTime(evalData.due_date)}
-          </p>
-        </div>
-        
-        <div>
-          <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>File Types</p>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: '#1f2937', fontWeight: '600' }}>
-            {getFileTypesDisplay()}
-          </p>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '1.5rem'
+        }}>
+          <div>
+            <label style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500', display: 'block', marginBottom: '0.5rem' }}>Phase</label>
+            <p style={{ margin: 0, fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>
+              Phase {phase?.phase_number || evalData.phase_number}: {phase?.title || evalData.phase_title}
+            </p>
+          </div>
+          
+          <div>
+            <label style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500', display: 'block', marginBottom: '0.5rem' }}>File Type</label>
+            <p style={{ margin: 0, fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>
+              Built-in Evaluation Form
+            </p>
+          </div>
+          
+          <div>
+            <label style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500', display: 'block', marginBottom: '0.5rem' }}>Total Points</label>
+            <p style={{ margin: 0, fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>
+              {evalData.total_points || 100} points
+            </p>
+          </div>
+          
+          <div>
+            <label style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '500', display: 'block', marginBottom: '0.5rem' }}>Due Date</label>
+            <p style={{ margin: 0, fontSize: '1rem', color: '#1f2937', fontWeight: '600' }}>
+              {formatDateTime(evalData.due_date)}
+            </p>
+          </div>
         </div>
       </div>
 
-      {(phaseEvaluationForm?.instructions || evalData.description) && (
-        <div style={{
-          paddingTop: '1rem',
-          borderTop: '1px solid #e5e7eb'
-        }}>
-          <p style={{ margin: 0, color: '#6b7280', lineHeight: '1.5', fontSize: '0.9rem' }}>
-            {phaseEvaluationForm?.instructions || evalData.description}
-          </p>
-        </div>
-      )}
+      <div style={{
+        backgroundColor: '#f0f9ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: '12px',
+        padding: '1.5rem'
+      }}>
+        <h4 style={{ margin: '0 0 0.75rem 0', color: '#1f2937', fontSize: '1rem', fontWeight: '600' }}>Instructions</h4>
+        <p style={{ margin: 0, color: '#6b7280', lineHeight: '1.6' }}>
+          {phaseEvaluationForm?.instructions || evalData.description || 'Rate your groupmates according to the following criteria. Use the point scale provided for each criterion.'}
+        </p>
+      </div>
+
+      <div style={{
+        backgroundColor: '#fef3c7',
+        border: '1px solid #fcd34d',
+        borderRadius: '12px',
+        padding: '1.5rem'
+      }}>
+        <h4 style={{ margin: '0 0 0.75rem 0', color: '#92400e', fontSize: '1rem', fontWeight: '600' }}>📌 Next Step</h4>
+        <p style={{ margin: 0, color: '#78350f', lineHeight: '1.6' }}>
+          Click "Next" to start evaluating team members. You'll evaluate each member separately using the rubric criteria.
+        </p>
+      </div>
     </div>
   );
-  };
 
   // Page 2+: Member Evaluation
   const renderMemberPage = () => {
@@ -952,212 +590,58 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
     const currentMember = groupMembers[currentMemberIndex];
     if (!currentMember) return null;
 
-    const totalCriteria = phaseEvaluationCriteria?.length || 0;
-    const completedCriteria = phaseEvaluationCriteria?.filter(c => {
-      const val = evaluationData.evaluated_members[currentMember.student_id]?.criteria[c.id];
-      return val !== undefined && val !== null && val !== '' && val !== 0;
-    }).length || 0;
-    const totalPoints = phaseEvaluationForm?.total_points || phaseEvaluationCriteria?.reduce((sum, c) => sum + c.max_points, 0) || 0;
-    const currentTotal = evaluationData.evaluated_members[currentMember.student_id]?.total || 0;
-
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* Member Header with Profile and Score */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            {/* Profile Image */}
-            <div style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              backgroundColor: '#e5e7eb',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: '#6b7280',
-              overflow: 'hidden',
-              flexShrink: 0,
-              backgroundImage: getProfileImageUrl(currentMember) ? `url("${getProfileImageUrl(currentMember)}")` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center center'
-            }}>
-              {!getProfileImageUrl(currentMember) && 'M'}
-            </div>
-            {/* Member Info */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.25rem'
-            }}>
-              <h2 style={{
-                margin: 0,
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: '#1f2937'
-              }}>
-                {currentMember.first_name} {currentMember.last_name}
-              </h2>
-              <p style={{
-                margin: 0,
-                fontSize: '0.95rem',
-                color: '#6b7280',
-                fontWeight: '500'
-              }}>
-                {currentMember.is_leader || currentMember.role === 'leader' ? 'leader' : 'member'}
-              </p>
-            </div>
-          </div>
-          {/* Score */}
-          <div style={{
-            fontSize: '1.5rem',
-            fontWeight: '700',
-            color: '#1f2937',
-            whiteSpace: 'nowrap'
-          }}>
-            {currentTotal} / {totalPoints}
-          </div>
-        </div>
-
-        {/* Clear Button - Hidden when read-only */}
-        {!isReadOnly && (
-          <button
-            onClick={() => {
-              const updatedCriteria = {};
-              phaseEvaluationCriteria?.forEach(c => {
-                updatedCriteria[c.id] = 0;
-              });
-              setEvaluationData(prev => ({
-                ...prev,
-                evaluated_members: {
-                  ...prev.evaluated_members,
-                  [currentMember.student_id]: {
-                    ...prev.evaluated_members[currentMember.student_id],
-                    criteria: updatedCriteria,
-                    total: 0
-                  }
-                },
-                aggregate_total: Object.values(prev.evaluated_members).reduce((sum, member) => {
-                  if (member.student_id === currentMember.student_id) return sum;
-                  return sum + (member.total || 0);
-                }, 0)
-              }));
-            }}
-            style={{
-              alignSelf: 'flex-start',
-              padding: '0.5rem 1rem',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: '600',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#dc2626';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#ef4444';
-              e.target.style.transform = 'translateY(0)';
-            }}
-          >
-            Clear Grades
-          </button>
-        )}
-
-        {/* Evaluation Criteria Grid - 2 columns */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Evaluation Criteria (compact grid, 2 per row) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          gap: '1.5rem'
+          gap: '0.75rem'
         }}>
           {phaseEvaluationCriteria && Array.isArray(phaseEvaluationCriteria) && phaseEvaluationCriteria.length > 0 ? (
             phaseEvaluationCriteria.map((criterion) => {
-              const currentValue = evaluationData.evaluated_members[currentMember.student_id]?.criteria[criterion.id] || 0;
-              const isFilled = currentValue !== undefined && currentValue !== null && currentValue !== '' && currentValue !== 0;
-              const percentage = criterion.max_points > 0 ? Math.round((currentValue / criterion.max_points) * 100) : 0;
-              
+              const currentValue = evaluationData.evaluated_members[currentMember.id]?.criteria[criterion.id] || 0;
               return (
                 <div key={criterion.id} style={{
                   backgroundColor: '#f9fafb',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  border: '1px solid #e5e7eb'
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
                 }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '0.75rem'
-                  }}>
-                    <h4 style={{
-                      margin: 0,
-                      fontSize: '0.95rem',
-                      fontWeight: '600',
-                      color: '#1a1a1a',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      flex: 1
-                    }}>
-                      {criterion.name}
-                      {isFilled && <FaCheck style={{ color: '#10b981', fontSize: '0.75rem' }} />}
-                    </h4>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ color: '#1f2937', fontSize: '0.95rem', display: 'block', marginBottom: '0.1rem' }}>
+                        {criterion.name}
+                      </strong>
+                      <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0, lineHeight: '1.2' }}>
+                        {criterion.description}
+                      </p>
+                    </div>
                     <span style={{
-                      backgroundColor: '#e0f2fe',
-                      color: '#0369a1',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '6px',
+                      backgroundColor: '#dbeafe',
+                      color: '#1e40af',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '8px',
                       fontSize: '0.75rem',
                       fontWeight: '600',
-                      whiteSpace: 'nowrap',
-                      marginLeft: '0.5rem'
+                      whiteSpace: 'nowrap'
                     }}>
-                      {criterion.max_points} pts
+                      {criterion.max_points}pt
                     </span>
                   </div>
-                  
-                  {criterion.description && (
-                    <p style={{
-                      margin: '0 0 0.75rem 0',
-                      fontSize: '0.8rem',
-                      color: '#6b7280',
-                      lineHeight: '1.4'
-                    }}>
-                      {criterion.description}
-                    </p>
-                  )}
-                  
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    backgroundColor: '#fff',
-                    borderRadius: '8px',
-                    padding: '0.75rem',
-                    border: '1px solid #ddd'
-                  }}>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
                     <input
                       type="number"
                       min="0"
                       max={criterion.max_points}
                       value={currentValue}
-                      onChange={(e) => !isReadOnly && handleScoreChange(currentMember.student_id, criterion.id, e.target.value, criterion.max_points)}
+                      onChange={(e) => handleScoreChange(currentMember.id, criterion.id, e.target.value, criterion.max_points)}
                       onBlur={(e) => {
-                        if (isReadOnly) return;
+                        // Ensure value is properly formatted when user leaves field
                         let val = parseInt(e.target.value) || 0;
                         if (val > criterion.max_points) {
                           val = criterion.max_points;
@@ -1165,247 +649,151 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
                         if (val < 0) {
                           val = 0;
                         }
-                        handleScoreChange(currentMember.student_id, criterion.id, val.toString(), criterion.max_points);
+                        handleScoreChange(currentMember.id, criterion.id, val.toString(), criterion.max_points);
                       }}
-                      placeholder="0"
-                      disabled={isReadOnly}
                       style={{
-                        width: '70px',
-                        border: 'none',
-                        textAlign: 'center',
-                        fontSize: '1.1rem',
-                        fontWeight: '700',
-                        outline: 'none',
-                        color: isReadOnly ? '#9ca3af' : '#3b82f6',
-                        backgroundColor: isReadOnly ? '#f3f4f6' : '#fff',
-                        cursor: isReadOnly ? 'not-allowed' : 'text'
+                        width: '72px',
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #e5e7eb',
+                        fontSize: '0.95rem'
                       }}
                     />
-                    <span style={{
-                      color: '#999',
-                      fontSize: '0.85rem',
-                      fontWeight: '500'
-                    }}>
-                      / {criterion.max_points}
-                    </span>
+
+                    <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                      <span style={{ fontWeight: 600, color: '#3b82f6' }}>{currentValue}</span> / {criterion.max_points}
+                    </div>
                   </div>
                 </div>
               );
             })
           ) : (
-            <div style={{
-              textAlign: 'center',
-              padding: '2rem',
-              color: '#999',
-              gridColumn: '1 / -1'
-            }}>
-              No evaluation criteria available
-            </div>
+            <p style={{ color: '#9ca3af', textAlign: 'center', fontSize: '0.9rem' }}>No criteria defined for this evaluation.</p>
           )}
         </div>
 
-      </div>
-    );
-  };
-
-  // Page 3: Submission/Summary
-  const renderSubmissionPage = () => {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
-        {/* Member Cards Grid */}
-        {groupMembers.length > 0 && (
+        {/* Member Total Score */}
+        {phaseEvaluationCriteria && Array.isArray(phaseEvaluationCriteria) && (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '1.5rem'
+            backgroundColor: '#f0f9ff',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            border: '1px solid #bfdbfe',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
           }}>
-            {groupMembers.map((member) => {
-              const memberScore = evaluationData.evaluated_members[member.student_id]?.total || 0;
-              const totalPoints = evalData.total_points || 100;
-              const profileImage = getProfileImageUrl(member);
-              const isLeader = member.is_leader || member.role === 'leader';
-              const memberTasks = groupData?.tasks?.filter(t => t.assigned_to === member.id) || [];
-              
-              return (
-                <div key={member.id} style={{
-                  display: 'flex',
-                  gap: '1.5rem',
-                  padding: '1.5rem',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
-                }}>
-                  {/* Left: Profile Section */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    minWidth: '120px'
-                  }}>
-                    {/* Profile Image */}
-                    <div style={{
-                      position: 'relative',
-                      width: '80px',
-                      height: '80px',
-                      backgroundColor: '#f3f4f6',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden'
-                    }}>
-                      {profileImage ? (
-                        <img
-                          src={profileImage}
-                          alt={`${member.first_name} ${member.last_name}`}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      ) : (
-                        <FaUser style={{ fontSize: '1.5rem', color: '#9ca3af' }} />
-                      )}
-                      
-                      {/* Role Badge */}
-                      {isLeader && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '-6px',
-                          right: '-6px',
-                          backgroundColor: '#fbbf24',
-                          borderRadius: '50%',
-                          width: '28px',
-                          height: '28px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
-                        }}>
-                          <FaCrown style={{ fontSize: '0.85rem', color: '#ffffff' }} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Member Name */}
-                    <div style={{
-                      textAlign: 'center',
-                      width: '100%'
-                    }}>
-                      <div style={{
-                        fontSize: '0.85rem',
-                        fontWeight: '700',
-                        color: '#1f2937'
-                      }}>
-                        {member.first_name} {member.last_name}
-                      </div>
-                    </div>
-
-                    {/* Role Badge */}
-                    <div style={{
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      color: isLeader ? '#d97706' : '#6b7280',
-                      backgroundColor: isLeader ? '#fef3c7' : '#f3f4f6',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '4px'
-                    }}>
-                      {isLeader ? 'Leader' : 'Member'}
-                    </div>
-                  </div>
-
-                  {/* Middle: Score Section */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minWidth: '100px',
-                    borderRight: '1px solid #e5e7eb',
-                    paddingRight: '1.5rem'
-                  }}>
-                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>Score</p>
-                    <div style={{
-                      fontSize: '1.5rem',
-                      fontWeight: '700',
-                      color: '#000000'
-                    }}>
-                      {memberScore}
-                    </div>
-                    <div style={{
-                      fontSize: '0.8rem',
-                      color: '#6b7280'
-                    }}>
-                      / {totalPoints}
-                    </div>
-                  </div>
-
-                  {/* Right: Tasks Section */}
-                  <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem'
-                  }}>
-                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>Assigned Tasks</p>
-                    {memberTasks.length > 0 ? (
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.5rem'
-                      }}>
-                        {memberTasks.map((task) => {
-                          const statusColors = {
-                            'pending': { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
-                            'in_progress': { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' },
-                            'completed': { bg: '#dcfce7', text: '#166534', border: '#86efac' },
-                            'submitted': { bg: '#dcfce7', text: '#166534', border: '#86efac' },
-                            'default': { bg: '#f3f4f6', text: '#6b7280', border: '#e5e7eb' }
-                          };
-                          const statusColor = statusColors[task.status?.toLowerCase()] || statusColors.default;
-                          
-                          return (
-                            <div key={task.id} style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '0.5rem 0.75rem',
-                              backgroundColor: statusColor.bg,
-                              border: `1px solid ${statusColor.border}`,
-                              borderRadius: '6px',
-                              fontSize: '0.8rem'
-                            }}>
-                              <span style={{ color: '#1f2937', fontWeight: '500' }}>{task.title || task.name}</span>
-                              <span style={{
-                                color: statusColor.text,
-                                fontWeight: '600',
-                                fontSize: '0.7rem',
-                                padding: '0.2rem 0.5rem',
-                                backgroundColor: 'rgba(255, 255, 255, 0.5)',
-                                borderRadius: '4px'
-                              }}>
-                                {task.status?.toUpperCase() || 'PENDING'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>No tasks assigned</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <strong style={{ color: '#1f2937', fontSize: '0.9rem' }}>Total:</strong>
+            <div style={{
+              fontSize: '1.25rem',
+              fontWeight: 'bold',
+              color: '#3b82f6'
+            }}>
+              {evaluationData.evaluated_members[currentMember.id]?.total || 0} / {phaseEvaluationForm?.total_points || phaseEvaluationCriteria.reduce((sum, c) => sum + c.max_points, 0)}
+            </div>
           </div>
         )}
       </div>
     );
   };
+
+  // Page 3: Submission/Summary
+  const renderSubmissionPage = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{
+        backgroundColor: '#f3fafb',
+        border: '1px solid #c1e4e8',
+        borderRadius: '12px',
+        padding: '1.5rem'
+      }}>
+        <h3 style={{ margin: '0 0 1rem 0', color: '#1f2937', fontSize: '1.1rem', fontWeight: '600' }}>Submission Summary</h3>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '1.5rem'
+        }}>
+          <div>
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>Members Evaluated</p>
+            <p style={{ margin: 0, fontSize: '1.25rem', color: '#1f2937', fontWeight: '700' }}>
+              {Object.values(evaluationData.evaluated_members).filter(m => m.total > 0).length} / {Object.keys(evaluationData.evaluated_members).length}
+            </p>
+          </div>
+          
+          <div>
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#6b7280', fontWeight: '500' }}>Total Points Assigned</p>
+            <p style={{ margin: 0, fontSize: '1.25rem', color: '#1f2937', fontWeight: '700' }}>
+              {evaluationData.aggregate_total} points
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Member Summary Table */}
+      {groupMembers.length > 0 && (
+        <div style={{
+          backgroundColor: '#f9fafb',
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          overflow: 'hidden'
+        }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: '0.9rem'
+          }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e5e7eb', backgroundColor: '#f3f4f6' }}>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#1f2937' }}>Member</th>
+                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#1f2937' }}>Score</th>
+                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#1f2937' }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupMembers.map((member, idx) => {
+                const memberScore = evaluationData.evaluated_members[member.id]?.total || 0;
+                const isCompleted = memberScore > 0;
+                return (
+                  <tr key={member.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '1rem', color: '#1f2937' }}>
+                      {member.first_name} {member.last_name}
+                    </td>
+                    <td style={{ padding: '1rem', textAlign: 'center', color: '#3b82f6', fontWeight: '600' }}>
+                      {memberScore} / {evalData.total_points || 100}
+                    </td>
+                    <td style={{ padding: '1rem', textAlign: 'center' }}>
+                      <span style={{
+                        backgroundColor: isCompleted ? '#d1fae5' : '#fee2e2',
+                        color: isCompleted ? '#065f46' : '#991b1b',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '12px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600'
+                      }}>
+                        {isCompleted ? '✓ Scored' : '⊘ Pending'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div style={{
+        backgroundColor: '#fef3c7',
+        border: '1px solid #fcd34d',
+        borderRadius: '12px',
+        padding: '1.5rem'
+      }}>
+        <h4 style={{ margin: '0 0 0.75rem 0', color: '#92400e', fontSize: '1rem', fontWeight: '600' }}>📝 Ready to Submit?</h4>
+        <p style={{ margin: 0, color: '#78350f', lineHeight: '1.6' }}>
+          Review your evaluations above. Once submitted, your evaluation scores cannot be changed. Make sure all team members have been evaluated fairly.
+        </p>
+      </div>
+    </div>
+  );
 
   // Determine which page to render
   const renderCurrentPage = () => {
@@ -1470,65 +858,15 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
         )}
 
         {/* Modal Header */}
-        <div style={{
-          backgroundColor: getHeaderColor(evaluation),
-          borderBottom: 'none',
-          padding: '1.5rem 2rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h2 style={{
-              margin: 0,
-              fontSize: '1.3rem',
-              fontWeight: 600,
-              color: '#ffffff',
-              textShadow: 'none',
-              WebkitTextFillColor: '#ffffff',
-              filter: 'none'
-            }}>
-              Phase {phase?.title || evalData.phase_title || 'Evaluation'} Evaluation
-            </h2>
-            <div style={{
-              backgroundColor: getStatusPillColor(),
-              color: 'white',
-              padding: '0.35rem 0.75rem',
-              borderRadius: '12px',
-              fontSize: '0.75rem',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              whiteSpace: 'nowrap'
-            }}>
-              {getPhaseEvaluationStatus() === 'upcoming' ? <FaClock style={{ fontSize: '0.65rem' }} /> : 
-               getPhaseEvaluationStatus() === 'ongoing' ? <FaClock style={{ fontSize: '0.65rem' }} /> : 
-               getPhaseEvaluationStatus() === 'submitted' ? <FaCheckDouble style={{ fontSize: '0.65rem' }} /> : 
-               getPhaseEvaluationStatus() === 'missed' ? <FaTimes style={{ fontSize: '0.65rem' }} /> : null}
-              {getStatusPillText()}
-            </div>
+        <div className="task-detail-modal-header" style={{ backgroundColor: getHeaderColor(evaluation), flex: '0 0 auto' }}>
+          <div className="task-detail-modal-header-left">
+            {/* Header left content */}
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.3rem',
-              cursor: 'pointer',
-              color: '#ffffff',
-              padding: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: 0.8,
-              transition: 'opacity 0.2s'
-            }}
-            onMouseEnter={(e) => e.target.style.opacity = '1'}
-            onMouseLeave={(e) => e.target.style.opacity = '0.8'}
-          >
-            <FaTimes />
-          </button>
+          <div className="task-detail-modal-header-right">
+            <button className="task-detail-modal-close-btn" onClick={onClose}>
+              <FaTimes />
+            </button>
+          </div>
         </div>
 
         {/* Modal Content - Scrollable */}
@@ -1585,35 +923,27 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
 
               {/* Member Buttons */}
               {groupMembers.map((member, idx) => {
-                const memberScore = evaluationData.evaluated_members[member.student_id]?.total || 0;
+                const memberScore = evaluationData.evaluated_members[member.id]?.total || 0;
                 const isCompleted = memberScore > 0;
                 // Use same naming logic as "My Group" sidebar
                 const memberName = member.full_name || member.user_name || member.name || 'Unknown';
                 const memberPosition = member.position || member.role || member.title || 'Team Member';
                 
-                // Check if current member evaluation is complete
-                const currentMember = groupMembers[currentMemberIndex];
-                const isCurrentMemberComplete = currentMember && evaluationData.evaluated_members[currentMember.student_id]?.total > 0;
-                const canClickButton = idx <= currentMemberIndex || isCurrentMemberComplete;
-                
                 return (
                   <button
                     key={member.id}
                     onClick={() => {
-                      if (canClickButton) {
-                        setCurrentPage(`member-${idx}`);
-                        setCurrentMemberIndex(idx);
-                      }
+                      setCurrentPage(`member-${idx}`);
+                      setCurrentMemberIndex(idx);
                     }}
-                    disabled={!canClickButton}
                     style={{
                       backgroundColor: currentPage === `member-${idx}` ? '#f0f0f0' : 'white',
-                      color: canClickButton ? '#333' : '#ccc',
+                      color: '#333',
                       border: 'none',
                       borderBottom: '1px solid #e0e0e0',
                       padding: '12px 14px',
                       borderRadius: '0',
-                      cursor: canClickButton ? 'pointer' : 'not-allowed',
+                      cursor: 'pointer',
                       fontSize: '0.9rem',
                       fontWeight: '500',
                       textAlign: 'left',
@@ -1621,20 +951,19 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'flex-start',
-                      margin: 0,
-                      opacity: canClickButton ? 1 : 0.5
+                      margin: 0
                     }}
                     onMouseEnter={(e) => {
-                      if (currentPage !== `member-${idx}` && canClickButton) {
+                      if (currentPage !== `member-${idx}`) {
                         e.currentTarget.style.backgroundColor = 'white';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (currentPage !== `member-${idx}` && canClickButton) {
+                      if (currentPage !== `member-${idx}`) {
                         e.currentTarget.style.backgroundColor = 'white';
                       }
                     }}
-                    title={canClickButton ? `Evaluating Member: ${memberName} - ${memberPosition}` : 'Complete current member evaluation first'}
+                    title={`Evaluating Member: ${memberName} - ${memberPosition}`}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: 1, minWidth: 0, flexDirection: 'column' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%' }}>
@@ -1654,59 +983,40 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
               })}
 
               {/* Submission Button */}
-              {(() => {
-                const allMembersEvaluated = groupMembers.every(member => {
-                  // Check if all criteria are filled for this member
-                  const allCriteriaFilled = phaseEvaluationCriteria?.every(criterion => {
-                    const score = evaluationData.evaluated_members[member.student_id]?.criteria[criterion.id];
-                    return score !== undefined && score !== null && score !== '' && score !== 0;
-                  });
-                  return allCriteriaFilled || false;
-                });
-                const canSubmit = allMembersEvaluated;
-                
-                return (
-                  <button
-                    onClick={() => {
-                      if (canSubmit) {
-                        setCurrentPage('submission');
-                      }
-                    }}
-                    disabled={!canSubmit}
-                    style={{
-                      backgroundColor: currentPage === 'submission' ? '#f0f0f0' : 'white',
-                      color: canSubmit ? '#333' : '#ccc',
-                      border: 'none',
-                      padding: '12px 14px',
-                      borderRadius: '0',
-                      cursor: canSubmit ? 'pointer' : 'not-allowed',
-                      fontSize: '1.02rem',
-                      fontWeight: '500',
-                      textAlign: 'left',
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      margin: 0,
-                      opacity: canSubmit ? 1 : 0.5
-                    }}
-                    onMouseEnter={(e) => {
-                      if (currentPage !== 'submission' && canSubmit) {
-                        e.currentTarget.style.backgroundColor = 'white';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (currentPage !== 'submission' && canSubmit) {
-                        e.currentTarget.style.backgroundColor = 'white';
-                      }
-                    }}
-                    title={canSubmit ? 'Review and submit your evaluations' : 'Complete all member evaluations first'}
-                  >
-                    <FaCheckCircle style={{ fontSize: '1rem', flexShrink: 0, color: canSubmit ? '#666' : '#ccc' }} />
-                    <span>Review & Submit</span>
-                  </button>
-                );
-              })()}
+              <button
+                onClick={() => {
+                  setCurrentPage('submission');
+                }}
+                style={{
+                  backgroundColor: currentPage === 'submission' ? '#f0f0f0' : 'white',
+                  color: '#333',
+                  border: 'none',
+                  padding: '12px 14px',
+                  borderRadius: '0',
+                  cursor: 'pointer',
+                  fontSize: '1.02rem',
+                  fontWeight: '500',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  margin: 0
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== 'submission') {
+                    e.currentTarget.style.backgroundColor = 'white';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== 'submission') {
+                    e.currentTarget.style.backgroundColor = 'white';
+                  }
+                }}
+              >
+                <FaCheckCircle style={{ fontSize: '1rem', flexShrink: 0, color: '#666' }} />
+                <span>Review & Submit</span>
+              </button>
             </div>
 
             {/* Right Column - Content Area */}
@@ -1715,428 +1025,269 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
               overflowY: 'auto',
               backgroundColor: '#ffffff'
             }}>
-              {!currentPage.startsWith('member-') && (
-                // Default title for other pages
-                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: '#1f2937', marginBottom: '2rem' }}>
-                  {getPageTitle()}
-                </h2>
-              )}
-              {renderCurrentPage()}
-            </div>
-          </div>
-         ) : (
-           // Custom Evaluation - Full Width Layout
-           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-             {/* Full Width Content */}
-             <div style={{ flex: 1 }}>
-            {/* Custom Evaluation - Centered UI */}
-            {isCustomEvaluation && (
-              <div className="task-detail-modal-description-section">
-                {/* Single Centered Section */}
-                <div style={{
-                  backgroundColor: 'transparent',
-                  padding: '1rem',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1rem'
-                }}>
-                  {/* Header */}
-                  <div>
+              <div style={{ marginBottom: '2rem' }}>
+                {currentPage.startsWith('member-') ? (
+                  // Member Evaluation Header with Profile Info
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}>
                     <div style={{
-                      width: '48px',
-                      height: '48px',
+                      width: '60px',
+                      height: '60px',
                       borderRadius: '50%',
-                      backgroundColor: '#fce7f3',
-                      border: '3px solid #ec4899',
-                      color: '#ec4899',
+                      backgroundColor: '#e5e7eb',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '1.5rem',
-                      margin: '0 auto 0.5rem'
-                    }}>
-                      <FaClipboardList />
-                    </div>
-                    <h3 style={{
-                      margin: '0 0 0.25rem 0',
-                      fontSize: '1.25rem',
                       fontWeight: '700',
-                      color: '#1f2937'
-                    }}>
-                      Evaluation Form
-                    </h3>
-                    <p style={{
-                      margin: 0,
                       color: '#6b7280',
-                      fontSize: '0.85rem',
-                      maxWidth: '500px',
-                      lineHeight: '1.3'
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      backgroundImage: getProfileImageUrl(groupMembers[currentMemberIndex]) ? `url(${getProfileImageUrl(groupMembers[currentMemberIndex])})` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
                     }}>
-                      {evaluation.file_name || evaluation.custom_file_name || 'evaluation-form.pdf'}
-                    </p>
+                      {!getProfileImageUrl(groupMembers[currentMemberIndex]) && (groupMembers[currentMemberIndex]?.first_name?.[0] || 'M').toUpperCase()}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: '#1f2937' }}>
+                        {groupMembers[currentMemberIndex]?.first_name} {groupMembers[currentMemberIndex]?.last_name}
+                      </h2>
+                      <p style={{ margin: 0, fontSize: '0.95rem', color: '#6b7280', fontWeight: '500' }}>
+                        {groupMembers[currentMemberIndex]?.position || groupMembers[currentMemberIndex]?.role || groupMembers[currentMemberIndex]?.title || 'Team Member'}
+                      </p>
+                    </div>
                   </div>
+                ) : (
+                  // Default title for other pages
+                  <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700', color: '#1f2937' }}>
+                    {getPageTitle()}
+                  </h2>
+                )}
+              </div>
 
-                  {/* Evaluation Info Pills */}
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    justifyContent: 'center',
-                    maxWidth: '600px',
-                    marginTop: '0.5rem'
-                  }}>
-                    {evaluation.total_points && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: '#f0f9ff',
-                        border: '1px solid #bae6fd',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        color: '#0369a1'
-                      }}>
-                        <span>📊</span>
-                        <span>{evaluation.total_points} Points</span>
-                      </div>
-                    )}
-                    {evaluation.due_date && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: '#fef3f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        color: '#dc2626'
-                      }}>
-                        <span>📅</span>
-                        <span>Due: {dayjs(evaluation.due_date).format('MMM D, h:mm A')}</span>
-                      </div>
-                    )}
-                  </div>
+              {renderCurrentPage()}
+            </div>
+          </div>
+        ) : (
+          // Custom Evaluation - Original Layout
+          <div className="task-detail-modal-content">
+            {/* Left Column - Evaluation Details */}
+            <div className="task-detail-modal-left-column">
+            {/* Evaluation Title */}
+            <div className="task-detail-modal-title-section">
+              <h2 className="task-detail-modal-title">
+                {evalData.title || evalData.project_title || 'Evaluation'}
+              </h2>
+            </div>
 
-                  {/* Instructions */}
-                  {evaluation.instructions && (
-                    <div style={{
-                      width: '100%',
-                      maxWidth: '600px',
-                      padding: '0.75rem',
-                      backgroundColor: '#f9fafb',
-                      border: '1px solid #e5e7eb',
+            {/* Information Pills */}
+            <div className="task-detail-modal-pills">
+              <div className="task-detail-modal-pill">
+                <FaCalendarAlt className="task-detail-modal-pill-icon" />
+                <span className="task-detail-modal-pill-label">Due:</span>
+                <span className="task-detail-modal-pill-value">
+                  {formatDateTime(evalData.due_date)}
+                </span>
+              </div>
+              <div className="task-detail-modal-pill">
+                <FaUser className="task-detail-modal-pill-icon" />
+                <span className="task-detail-modal-pill-label">Type:</span>
+                <span className="task-detail-modal-pill-value">
+                  {isCustomEvaluation ? 'PDF Form' : 'Peer Evaluation'}
+                </span>
+              </div>
+              <div className="task-detail-modal-pill">
+                <FaClock className="task-detail-modal-pill-icon" />
+                <span className="task-detail-modal-pill-label">Status:</span>
+                <span className="task-detail-modal-pill-value">
+                  {evalData.status === 'active' ? 'Active' : evalData.status?.toUpperCase()}
+                </span>
+              </div>
+              {/* Late Indicator Pill */}
+              {isEvaluationLate(evalData) && (
+                <div className="task-detail-modal-pill" style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626'
+                }}>
+                  <FaExclamationTriangle className="task-detail-modal-pill-icon" />
+                  <span className="task-detail-modal-pill-label">Status:</span>
+                  <span className="task-detail-modal-pill-value" style={{ fontWeight: 'bold' }}>Late</span>
+                </div>
+              )}
+
+              {/* Auto-save Status */}
+              {isBuiltInEvaluation && saveStatus !== 'idle' && (
+                <div className="task-detail-modal-pill" style={{
+                  backgroundColor: saveStatus === 'saved' ? '#f0fdf4' : saveStatus === 'error' ? '#fef2f2' : '#eff6ff',
+                  border: saveStatus === 'saved' ? '1px solid #bbf7d0' : saveStatus === 'error' ? '1px solid #fecaca' : '1px solid #bfdbfe',
+                  color: saveStatus === 'saved' ? '#059669' : saveStatus === 'error' ? '#dc2626' : '#1e40af'
+                }}>
+                  <FaSave className="task-detail-modal-pill-icon" />
+                  <span className="task-detail-modal-pill-value" style={{ fontWeight: 'bold' }}>
+                    {saveStatus === 'saving' && 'Saving...'}
+                    {saveStatus === 'saved' && '✓ Saved'}
+                    {saveStatus === 'error' && '✗ Error'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Description Section */}
+            <div className="task-detail-modal-description-section">
+              <div className="task-detail-modal-section-header">
+                <div className="task-detail-modal-section-icon">📋</div>
+                <h3>Evaluation Details</h3>
+              </div>
+              <div className="task-detail-modal-description-content">
+                <p>
+                  {evalData.description || 
+                   'Complete your evaluation to provide feedback on this project or assignment.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Custom Evaluation - PDF Download/Upload */}
+            {isCustomEvaluation && (
+              <div className="task-detail-modal-description-section">
+                <div className="task-detail-modal-section-header">
+                  <div className="task-detail-modal-section-icon">📄</div>
+                  <h3>Evaluation Form</h3>
+                </div>
+                <div style={{
+                  backgroundColor: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem'
+                }}>
+                  <button
+                    onClick={handleDownloadPDF}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
                       borderRadius: '8px',
-                      marginTop: '0.5rem'
-                    }}>
-                      <div style={{
-                        fontSize: '0.7rem',
-                        fontWeight: '700',
-                        color: '#6b7280',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        marginBottom: '0.25rem'
-                      }}>
-                        Instructions
-                      </div>
-                      <div style={{
-                        fontSize: '0.8rem',
-                        color: '#374151',
-                        lineHeight: '1.4'
-                      }}>
-                        {evaluation.instructions}
-                      </div>
-                    </div>
-                  )}
+                      cursor: 'pointer',
+                      fontSize: '0.95rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#2563eb';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = '#3b82f6';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  >
+                    <FaDownload /> Download Evaluation Form
+                  </button>
 
-                  {/* View and Download Buttons */}
                   <div style={{
-                    display: 'flex',
-                    gap: '0.75rem',
-                    justifyContent: 'center',
-                    flexWrap: 'wrap'
-                  }}>
-                    <button
-                      onClick={handleViewPDF}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        backgroundColor: '#ec4899',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.625rem 1.5rem',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        minWidth: '140px'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = '#db2777';
+                    backgroundColor: 'white',
+                    border: '2px dashed #d1d5db',
+                    borderRadius: '8px',
+                    padding: '2rem',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.backgroundColor = '#f0f9ff';
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      handleFileUpload({ target: { files: [file] } });
+                    }
+                  }}
+                  onClick={() => document.getElementById('file-input-custom')?.click()}
+                  >
+                    <FaUpload style={{ fontSize: '2rem', color: '#9ca3af', marginBottom: '0.5rem' }} />
+                    <p style={{ margin: '0.5rem 0', color: '#6b7280' }}>
+                      Drop your completed form here or click to browse
+                    </p>
+                    <p style={{ margin: '0', fontSize: '0.85rem', color: '#9ca3af' }}>
+                      Supports PDF, DOC, DOCX files
+                    </p>
+                    <input
+                      id="file-input-custom"
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      style={{ display: 'none' }}
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const input = document.getElementById('file-input-custom');
+                      if (input) input.click();
+                    }}
+                    disabled={uploading}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      backgroundColor: uploading ? '#d1d5db' : '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: uploading ? 'not-allowed' : 'pointer',
+                      fontSize: '0.95rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease',
+                      opacity: uploading ? 0.6 : 1
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!uploading) {
+                        e.target.style.backgroundColor = '#059669';
                         e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 8px 20px rgba(236, 72, 153, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = '#ec4899';
+                        e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!uploading) {
+                        e.target.style.backgroundColor = '#10b981';
                         e.target.style.transform = 'translateY(0)';
                         e.target.style.boxShadow = 'none';
-                      }}
-                    >
-                      <FaFileAlt /> View Form
-                    </button>
-
-                    <button
-                      onClick={handleDownloadPDF}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.625rem 1.5rem',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        minWidth: '140px'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = '#2563eb';
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = '#3b82f6';
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    >
-                      <FaDownload /> Download
-                    </button>
-                  </div>
-
-                  {/* Divider */}
-                  <div style={{
-                    width: '100%',
-                    maxWidth: '500px',
-                    height: '1px',
-                    backgroundColor: '#e5e7eb',
-                    position: 'relative',
-                    margin: '0.5rem 0'
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      backgroundColor: 'white',
-                      padding: '0 0.75rem',
-                      color: '#9ca3af',
-                      fontSize: '0.75rem',
-                      fontWeight: '600'
-                    }}>
-                      THEN
-                    </div>
-                  </div>
-
-                  {/* Upload Section */}
-                  <div style={{ width: '100%', maxWidth: '600px' }}>
-                    {uploadedFileName ? (
-                      // File Selected View
-                      <div style={{
-                        backgroundColor: '#f0fdf4',
-                        border: '2px solid #86efac',
-                        borderRadius: '8px',
-                        padding: '1rem',
-                        textAlign: 'center'
-                      }}>
-                        <FaCheckCircle style={{ fontSize: '2rem', color: '#10b981', marginBottom: '0.5rem' }} />
-                        <p style={{
-                          margin: '0 0 0.25rem 0',
-                          fontSize: '0.95rem',
-                          fontWeight: '700',
-                          color: '#166534'
-                        }}>
-                          ✓ File Ready to Submit
-                        </p>
-                        <p style={{
-                          margin: '0 0 0.75rem 0',
-                          fontSize: '0.8rem',
-                          color: '#15803d',
-                          wordBreak: 'break-word'
-                        }}>
-                          {uploadedFileName}
-                        </p>
-                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                          <button
-                            onClick={() => {
-                              setUploadedFileName(null);
-                              setSelectedFile(null);
-                              const input = document.getElementById('file-input-custom');
-                              if (input) input.value = '';
-                            }}
-                            style={{
-                              backgroundColor: '#6b7280',
-                              color: 'white',
-                              border: 'none',
-                              padding: '0.625rem 1.25rem',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              fontSize: '0.9rem',
-                              fontWeight: '600',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.backgroundColor = '#4b5563';
-                              e.target.style.transform = 'translateY(-2px)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.backgroundColor = '#6b7280';
-                              e.target.style.transform = 'translateY(0)';
-                            }}
-                          >
-                            Change File
-                          </button>
-                          <button
-                            onClick={handleSubmitCustomEvaluation}
-                            disabled={uploading || isReadOnly}
-                            style={{
-                              backgroundColor: uploading ? '#9ca3af' : '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              padding: '0.625rem 1.5rem',
-                              borderRadius: '8px',
-                              cursor: uploading || isReadOnly ? 'not-allowed' : 'pointer',
-                              fontSize: '0.9rem',
-                              fontWeight: '600',
-                              transition: 'all 0.2s ease',
-                              opacity: uploading || isReadOnly ? 0.6 : 1
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!uploading && !isReadOnly) {
-                                e.target.style.backgroundColor = '#059669';
-                                e.target.style.transform = 'translateY(-2px)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!uploading && !isReadOnly) {
-                                e.target.style.backgroundColor = '#10b981';
-                                e.target.style.transform = 'translateY(0)';
-                              }
-                            }}
-                          >
-                            {uploading ? 'Submitting...' : 'Submit Evaluation'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Drag & Drop Upload Area
-                      <>
-                        <div style={{
-                          backgroundColor: '#fafafa',
-                          border: '2px dashed #d1d5db',
-                          borderRadius: '12px',
-                          padding: '1.5rem 1rem',
-                          textAlign: 'center',
-                          cursor: uploading ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.3s ease',
-                          opacity: uploading ? 0.6 : 1
-                        }}
-                        onDragOver={(e) => {
-                          if (!uploading) {
-                            e.preventDefault();
-                            e.currentTarget.style.backgroundColor = '#fef3f2';
-                            e.currentTarget.style.borderColor = '#ec4899';
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                          }
-                        }}
-                        onDragLeave={(e) => {
-                          if (!uploading) {
-                            e.currentTarget.style.backgroundColor = '#fafafa';
-                            e.currentTarget.style.borderColor = '#d1d5db';
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }
-                        }}
-                        onDrop={(e) => {
-                          if (!uploading) {
-                            e.preventDefault();
-                            e.currentTarget.style.backgroundColor = '#fafafa';
-                            e.currentTarget.style.borderColor = '#d1d5db';
-                            e.currentTarget.style.transform = 'scale(1)';
-                            const file = e.dataTransfer.files?.[0];
-                            if (file) {
-                              handleFileUpload({ target: { files: [file] } });
-                            }
-                          }
-                        }}
-                        onClick={() => {
-                          if (!uploading) {
-                            document.getElementById('file-input-custom')?.click();
-                          }
-                        }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            <FaUpload style={{
-                              fontSize: '2.5rem',
-                              color: '#9ca3af',
-                              marginBottom: '0.5rem'
-                            }} />
-                          </div>
-                          <p style={{
-                            margin: '0 0 0.25rem 0',
-                            color: '#1f2937',
-                            fontWeight: '700',
-                            fontSize: '0.95rem'
-                          }}>
-                            {uploading ? 'Uploading...' : 'Drop your completed form here'}
-                          </p>
-                          <p style={{
-                            margin: '0 0 0.25rem 0',
-                            fontSize: '0.8rem',
-                            color: '#6b7280'
-                          }}>
-                            or click to browse
-                          </p>
-                          <p style={{
-                            margin: 0,
-                            fontSize: '0.75rem',
-                            color: '#9ca3af'
-                          }}>
-                            PDF, DOC, DOCX • Max 10MB
-                          </p>
-                          <input
-                            id="file-input-custom"
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            style={{ display: 'none' }}
-                            onChange={handleFileUpload}
-                            disabled={uploading || isReadOnly}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
+                      }
+                    }}
+                  >
+                    <FaUpload /> {uploading ? 'Uploading...' : 'Upload Completed Form'}
+                  </button>
                 </div>
               </div>
             )}
-          </div>
-        </div>
-        )}
 
-        {/* Built-In Evaluation - Criteria Form - MOVED OUTSIDE */}
-        {false && isBuiltInEvaluation && (
-          <div style={{ display: 'none' }}>
+            {/* Built-In Evaluation - Criteria Form */}
             {isBuiltInEvaluation && (
               <div className="task-detail-modal-description-section">
                 <div className="task-detail-modal-section-header">
@@ -2193,6 +1344,348 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
               )}
             </div>
           </div>
+
+          {/* Right Column - Member Selection or Status */}
+          <div className="task-detail-modal-right-column">
+            {isBuiltInEvaluation && groupMembers.length > 0 ? (
+              <>
+                {/* Member Selection Section */}
+                <div className="task-detail-modal-file-upload-section">
+                  <div className="task-detail-modal-section-header">
+                    <h3>Select Team Member</h3>
+                  </div>
+                  <div className="task-detail-modal-file-upload-area">
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem'
+                    }}>
+                      {groupMembers.map((member) => (
+                        <div
+                          key={member.id}
+                          onClick={() => setSelectedMember(member.id)}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            borderRadius: '8px',
+                            backgroundColor: selectedMember === member.id ? '#dbeafe' : '#f3f4f6',
+                            border: selectedMember === member.id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = selectedMember === member.id ? '#dbeafe' : '#e5e7eb';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = selectedMember === member.id ? '#dbeafe' : '#f3f4f6';
+                          }}
+                        >
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: '#e5e7eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            color: '#6b7280'
+                          }}>
+                            {(member.first_name?.[0] || 'M').toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{
+                              fontWeight: '600',
+                              color: '#1f2937',
+                              fontSize: '0.9rem'
+                            }}>
+                              {member.first_name} {member.last_name}
+                            </div>
+                            <div style={{
+                              fontSize: '0.8rem',
+                              color: '#9ca3af'
+                            }}>
+                              {member.email}
+                            </div>
+                          </div>
+                          {selectedMember === member.id && (
+                            <FaCheckCircle style={{
+                              marginLeft: 'auto',
+                              color: '#3b82f6',
+                              fontSize: '1.1rem'
+                            }} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Member Scores Section */}
+                {selectedMember && (
+                  <div className="task-detail-modal-file-upload-section">
+                    <div className="task-detail-modal-section-header">
+                      <h3>Score {groupMembers.find(m => m.id === selectedMember)?.first_name}</h3>
+                    </div>
+                    <div className="task-detail-modal-file-upload-area">
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem'
+                      }}>
+                        {evalData.criteria && Array.isArray(evalData.criteria) && evalData.criteria.map((criterion) => (
+                          <div key={criterion.id} style={{
+                            backgroundColor: '#f9fafb',
+                            padding: '1rem',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb'
+                          }}>
+                            <div style={{
+                              marginBottom: '0.5rem',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start'
+                            }}>
+                              <div>
+                                <strong style={{ color: '#1f2937' }}>{criterion.name}</strong>
+                                <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                                  {criterion.description}
+                                </p>
+                              </div>
+                              <span style={{
+                                backgroundColor: '#dbeafe',
+                                color: '#1e40af',
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '12px',
+                                fontSize: '0.8rem',
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap',
+                                marginLeft: '0.5rem'
+                              }}>
+                                Max: {criterion.max_points}
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max={criterion.max_points}
+                              value={evaluationData.evaluated_members[selectedMember]?.criteria[criterion.id] || 0}
+                              onChange={(e) => handleScoreChange(selectedMember, criterion.id, e.target.value, criterion.max_points)}
+                              style={{
+                                width: '100%',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            <div style={{
+                              marginTop: '0.5rem',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontSize: '0.85rem',
+                              color: '#6b7280'
+                            }}>
+                              <span>0</span>
+                              <span style={{
+                                fontWeight: '600',
+                                color: '#3b82f6'
+                              }}>
+                                {evaluationData.evaluated_members[selectedMember]?.criteria[criterion.id] || 0} / {criterion.max_points}
+                              </span>
+                              <span>{criterion.max_points}</span>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Member Total Score */}
+                        {evalData.criteria && Array.isArray(evalData.criteria) && (
+                          <div style={{
+                            backgroundColor: '#f0f9ff',
+                            padding: '1rem',
+                            borderRadius: '8px',
+                            border: '2px solid #bfdbfe'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}>
+                              <strong style={{ color: '#1f2937' }}>Total for {groupMembers.find(m => m.id === selectedMember)?.first_name}:</strong>
+                              <div style={{
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold',
+                                color: '#3b82f6'
+                              }}>
+                                {evaluationData.evaluated_members[selectedMember]?.total || 0} / {evalData.total_points || evalData.criteria.reduce((sum, c) => sum + c.max_points, 0)}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Overall Summary */}
+                        <div style={{
+                          backgroundColor: '#f3fafb',
+                          padding: '1rem',
+                          borderRadius: '8px',
+                          border: '1px solid #c1e4e8'
+                        }}>
+                          <strong style={{ color: '#1f2937', display: 'block', marginBottom: '0.5rem' }}>Overall Summary</strong>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: '0.75rem',
+                            fontSize: '0.9rem'
+                          }}>
+                            <div>
+                              <span style={{ color: '#6b7280' }}>Members Scored:</span>
+                              <div style={{ fontWeight: '600', color: '#1f2937' }}>
+                                {Object.values(evaluationData.evaluated_members).filter(m => m.total > 0).length} / {Object.keys(evaluationData.evaluated_members).length}
+                              </div>
+                            </div>
+                            <div>
+                              <span style={{ color: '#6b7280' }}>Aggregate Total:</span>
+                              <div style={{ fontWeight: '600', color: '#1f2937' }}>
+                                {evaluationData.aggregate_total} pts
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  onClick={handleSubmitAggregatedEvaluation}
+                  disabled={uploading}
+                  style={{
+                    width: '100%',
+                    backgroundColor: uploading ? '#d1d5db' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                    opacity: uploading ? 0.6 : 1,
+                    marginTop: '1rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!uploading) {
+                      e.target.style.backgroundColor = '#059669';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!uploading) {
+                      e.target.style.backgroundColor = '#10b981';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                >
+                  {uploading ? 'Submitting...' : 'Submit All Evaluations'}
+                </button>
+              </>
+            ) : (
+              /* Status Section for Custom Evaluations or when no members */
+              <div className="task-detail-modal-file-upload-section">
+                <div className="task-detail-modal-section-header">
+                  <h3>Evaluation Status</h3>
+                </div>
+                <div className="task-detail-modal-file-upload-area">
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1.5rem'
+                  }}>
+                    {/* Status Badge */}
+                    <div>
+                      <div style={{
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        color: '#6b7280',
+                        marginBottom: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        Current Status
+                      </div>
+                      <div style={{
+                        backgroundColor: getHeaderColor(evalData),
+                        color: 'white',
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '20px',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                        display: 'inline-block',
+                        textTransform: 'capitalize'
+                      }}>
+                        {evalData.status === 'active' ? 'Active' :
+                         evalData.status === 'pending' ? 'Pending' :
+                         evalData.status === 'submitted' ? 'Submitted' :
+                         evalData.status === 'completed' ? 'Completed' :
+                         evalData.status === 'late' ? 'Late' :
+                         evalData.status || 'Unknown'}
+                      </div>
+                    </div>
+
+                    {/* Timeline Card */}
+                    <div style={{
+                      backgroundColor: '#f9fafb',
+                      padding: '1rem',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        color: '#6b7280',
+                        marginBottom: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <FaClock /> Timeline
+                      </div>
+                      <div style={{
+                        fontSize: '0.9rem',
+                        color: '#555',
+                        lineHeight: '1.8'
+                      }}>
+                        <div style={{
+                          marginBottom: '0.75rem',
+                          paddingBottom: '0.75rem',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{
+                            fontSize: '0.8rem',
+                            color: '#9ca3af',
+                            marginBottom: '0.25rem'
+                          }}>
+                            Due Date
+                          </div>
+                          <div style={{
+                            fontSize: '0.95rem',
+                            fontWeight: '500',
+                            color: '#1f2937'
+                          }}>
+                            {formatDateTime(evalData.due_date)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         )}
         </div>
 
@@ -2251,15 +1744,14 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
             {currentPage === 'submission' && (
               <button
                 onClick={handleSubmitAggregatedEvaluation}
-                disabled={uploading || isReadOnly}
-                title={isReadOnly ? 'Submission period has ended' : ''}
+                disabled={uploading}
                 style={{
                   padding: '0.75rem 2rem',
-                  backgroundColor: (uploading || isReadOnly) ? '#d1d5db' : '#10b981',
+                  backgroundColor: uploading ? '#d1d5db' : '#10b981',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: (uploading || isReadOnly) ? 'not-allowed' : 'pointer',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
                   fontSize: '0.95rem',
                   fontWeight: '600',
                   transition: 'all 0.2s ease'
@@ -2314,167 +1806,6 @@ const EvaluationModal = ({ isOpen, onClose, evaluation, project, phase, groupDat
             >
               Next →
             </button>
-          </div>
-        )}
-
-        {/* File Preview Modal */}
-        {showFilePreview && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 20000,
-            padding: '2rem'
-          }}
-          onClick={() => setShowFilePreview(false)}
-          >
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              width: '90%',
-              maxWidth: '1200px',
-              height: '90%',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-            >
-              {/* Preview Header */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem 1.5rem',
-                borderBottom: '1px solid #e5e7eb',
-                backgroundColor: '#f9fafb'
-              }}>
-                <div>
-                  <h3 style={{
-                    margin: 0,
-                    fontSize: '1.1rem',
-                    fontWeight: '600',
-                    color: '#1f2937'
-                  }}>
-                    Evaluation Form Preview
-                  </h3>
-                  <p style={{
-                    margin: '0.25rem 0 0 0',
-                    fontSize: '0.85rem',
-                    color: '#6b7280'
-                  }}>
-                    {evaluation.file_name || evaluation.custom_file_name || 'evaluation-form.pdf'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowFilePreview(false)}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    fontSize: '1.25rem',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#dc2626';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = '#ef4444';
-                  }}
-                >
-                  <FaTimes />
-                </button>
-              </div>
-
-              {/* Preview Content */}
-              <div style={{
-                flex: 1,
-                overflow: 'hidden',
-                backgroundColor: '#525252'
-              }}>
-                <iframe
-                  src={evaluation.file_url || evaluation.custom_file_url}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none'
-                  }}
-                  title="Evaluation Form Preview"
-                />
-              </div>
-
-              {/* Preview Footer */}
-              <div style={{
-                display: 'flex',
-                gap: '0.75rem',
-                justifyContent: 'flex-end',
-                padding: '1rem 1.5rem',
-                borderTop: '1px solid #e5e7eb',
-                backgroundColor: '#f9fafb'
-              }}>
-                <button
-                  onClick={handleDownloadPDF}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#2563eb';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = '#3b82f6';
-                  }}
-                >
-                  <FaDownload /> Download
-                </button>
-                <button
-                  onClick={() => setShowFilePreview(false)}
-                  style={{
-                    backgroundColor: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#4b5563';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = '#6b7280';
-                  }}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
           </div>
         )}
       </div>
