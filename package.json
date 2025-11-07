@@ -1,9 +1,10 @@
 {
   "name": "s-man-system",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "scripts": {
     "build": "node build.js",
-    "start": "node start.js"
+    "start": "node start.js",
+    "postinstall": "node build.js"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
