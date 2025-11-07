@@ -1,14 +1,12 @@
 {
   "name": "s-man-system",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "engines": {
     "node": "22.16.0"
   },
   "scripts": {
-    "build": "node build.js",
-    "start": "node start.js",
-    "heroku-postbuild": "node build.js",
-    "postinstall": "node build.js || true"
+    "build": "node render-build.js",
+    "start": "node start.js"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
