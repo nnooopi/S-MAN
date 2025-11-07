@@ -17203,14 +17203,24 @@ app.get('/api/student/debug/group-membership-detailed', authenticateStudent, asy
   }
 });
 
-// =================== SPA CATCH-ALL ROUTE ===================
-// This MUST be the last route - it handles client-side routing for React Router
+// =================== SPA CATCH-ALL MIDDLEWARE ===================
+// This MUST be the last middleware - it handles client-side routing for React Router
 // Serve index.html for all non-API routes so React Router can handle navigation
 if (buildPathExists) {
-  app.get('/*', (req, res) => {
+  app.use((req, res, next) => {
+    // Only handle GET requests
+    if (req.method !== 'GET') {
+      return next();
+    }
+    
     // Don't intercept API routes
     if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: 'API endpoint not found' });
+      return next();
+    }
+    
+    // Don't intercept file requests (has extension)
+    if (path.extname(req.path)) {
+      return next();
     }
     
     console.log(`🔄 [SPA] Serving index.html for route: ${req.path}`);
